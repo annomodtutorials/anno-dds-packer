@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Anno DDS Packer</title>
+  <style>
+    @font-face {
+      font-family: 'OPTIAlert';
+      src: url('assets/fonts/OPTIAlert-Medium.otf') format('opentype');
+      font-weight: 500;
+      font-style: normal;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-user-select: none; user-select: none; }
+    html, body { width: 100%; height: 100%; background: #0B1828; overflow: hidden; }
+    .bg {
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse at center, #0a1220 0%, #050810 100%);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .corner { position: absolute; width: 44px; }
+    .c-tl { top: 0; left: 0; }
+    .c-tr { top: 0; right: 0; }
+    .c-bl { bottom: 0; left: 0; }
+    .c-br { bottom: 0; right: 0; }
+    .center { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+    .logo { width: 100px; height: 100px; object-fit: contain; }
+    .title {
+      font-family: 'OPTIAlert', Georgia, serif;
+      color: #C9A152;
+      font-size: 20px;
+      letter-spacing: 0.22em;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 2.5px solid rgba(201,161,82,0.18);
+      border-top-color: #C9A152;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="bg">
+    <img class="corner c-tl" src="assets/corner_1.png" alt="" />
+    <img class="corner c-tr" src="assets/corner_2.png" alt="" />
+    <img class="corner c-bl" src="assets/corner_3.png" alt="" />
+    <img class="corner c-br" src="assets/corner_4.png" alt="" />
+    <div class="center">
+      <img class="logo" src="assets/anno_hero_logo.png" alt="A" />
+      <div class="title">Anno DDS Packer</div>
+      <div class="spinner"></div>
+    </div>
+  </div>
+</body>
+</html>

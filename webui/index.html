@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Anno DDS Packer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="lib/react.production.min.js"></script>
+  <script src="lib/react-dom.production.min.js"></script>
+
+  <style>
+    /* ── Base ──────────────────────────────────────────────── */
+    html, body { background: #0B1828; margin: 0; padding: 0; }
+    #root { min-height: 100vh; background: #0B1828; }
+
+    /* ── Splash ────────────────────────────────────────────── */
+    @font-face {
+      font-family: 'OPTIAlert';
+      src: url('assets/fonts/OPTIAlert-Medium.otf') format('opentype');
+      font-weight: 500;
+    }
+    #splash {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: #0B1828;
+      transition: opacity 0.5s ease;
+      pointer-events: none;
+    }
+    #splash.fading { opacity: 0; }
+
+    /* Logo pinned to the exact pixel where the hero icon lives in the app:
+       hero panel top(142) + hero-stack padding-top(96) = 238px from viewport.
+       Size matches .hero-icon exactly: 256×256px, centered horizontally.
+       The heavy glow is stronger than the app's subtle drop-shadow so it
+       fades into the real icon as the splash fades — a natural cross-dissolve. */
+    #splash-logo {
+      position: absolute;
+      top: 238px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 256px;
+      height: 256px;
+      object-fit: contain;
+      filter:
+        drop-shadow(0 0 120px rgba(201,161,82,0.60))
+        drop-shadow(0 0  55px rgba(201,161,82,0.50))
+        drop-shadow(0 0  22px rgba(201,161,82,0.40))
+        drop-shadow(0 4px 10px rgba(201,161,82,0.25));
+    }
+
+    /* Text + spinner cluster at the hero-headline y position:
+       238px (icon top) + 256px (icon height) + 32px (headline margin) = 526px */
+    #splash-label {
+      position: absolute;
+      top: 526px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #splash-title {
+      font-family: 'OPTIAlert', Georgia, serif;
+      color: #C9A152;
+      font-size: 16px;
+      letter-spacing: 0.35em;
+      font-weight: 500;
+      text-transform: uppercase;
+      white-space: nowrap;
+      margin-bottom: 7px;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #splash-sub {
+      font-family: 'Inter', system-ui, sans-serif;
+      color: rgba(160, 190, 215, 0.45);
+      font-size: 10px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      margin-bottom: 22px;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #splash-spinner {
+      width: 26px;
+      height: 26px;
+      border: 1.5px solid rgba(160, 190, 215, 0.18);
+      border-top-color: rgba(160, 190, 215, 0.55);
+      border-radius: 50%;
+      animation: splash-spin 1.1s linear infinite;
+    }
+    @keyframes splash-spin { to { transform: rotate(360deg); } }
+
+    /* ── Drag region + window controls ────────────────────── */
+    #titlebar {
+      position: fixed; top: 0; left: 0; right: 0; height: 38px; z-index: 13000;
+    }
+    #wm-controls {
+      position: absolute; top: 6px; right: 8px; display: flex; gap: 3px;
+    }
+    #wm-controls button {
+      width: 26px; height: 26px; border: none; border-radius: 5px;
+      background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.55);
+      font-size: 12px; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; transition: background 0.12s, color 0.12s;
+      outline: none; font-family: system-ui, sans-serif; pointer-events: all;
+    }
+    #wm-controls button:hover { background: rgba(255,255,255,0.14); color: rgba(255,255,255,0.85); }
+    #wm-close:hover  { background: #c0392b !important; color: #fff !important; }
+    #wm-min:hover, #wm-max:hover {
+      background: rgba(201,161,82,0.18) !important; color: #C9A152 !important;
+    }
+    html[data-theme="modern"] #wm-min:hover,
+    html[data-theme="modern"] #wm-max:hover {
+      background: rgba(152,147,252,0.18) !important; color: #9893FC !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Splash — pure HTML/CSS, renders before React ─────────────── -->
+  <div id="splash">
+    <img id="splash-logo" src="assets/anno_hero_logo.png" alt="Anno" />
+    <div id="splash-label">
+      <div id="splash-title">Anno DDS Packer</div>
+      <div id="splash-sub">Loading…</div>
+      <div id="splash-spinner"></div>
+    </div>
+  </div>
+
+  <!-- ── Drag region + window controls ────────────────────────────── -->
+  <div id="titlebar" data-tauri-drag-region>
+    <div id="wm-controls">
+      <button id="wm-min"   title="Minimise"           onclick="__wmMin()">&#8722;</button>
+      <button id="wm-max"   title="Maximise / Restore" onclick="__wmMax()">&#9633;</button>
+      <button id="wm-close" title="Close"              onclick="__wmClose()">&#10005;</button>
+    </div>
+  </div>
+
+  <!-- ── App root ─────────────────────────────────────────────────── -->
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', function(e) {
+      console.error('[uncaught] ' + (e.error && e.error.stack ? e.error.stack : e.message));
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error('[unhandled-rejection] ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
+    });
+
+    // ── Reveal window once splash has painted ──────────────────────
+    // Window starts hidden (visible:false in tauri.conf.json) to avoid the
+    // native-window blue flash and the WebView2 black init flash. We show it
+    // only after two animation frames, which guarantees the browser has
+    // committed the first paint of the splash to the compositor.
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        window.__TAURI__.core.invoke('show_window').catch(function() {});
+      });
+    });
+
+    // ── Splash fade-out ────────────────────────────────────────────
+    var __splashHidden = false;
+    function __hideSplash() {
+      if (__splashHidden) return;
+      __splashHidden = true;
+      var el = document.getElementById('splash');
+      if (!el) return;
+      el.classList.add('fading');
+      setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 520);
+    }
+
+    // ── Window controls ────────────────────────────────────────────
+    function __wmMin()   { window.__TAURI__.core.invoke('minimize_window'); }
+    function __wmClose() { window.__TAURI__.core.invoke('close_window'); }
+    function __wmMax() {
+      window.__TAURI__.core.invoke('toggle_maximize').then(function(isNowMax) {
+        document.getElementById('wm-max').innerHTML = isNowMax ? '&#9634;' : '&#9633;';
+      });
+    }
+    window.__TAURI__.event.listen('tauri://resize', function() {
+      window.__TAURI__.core.invoke('is_maximized').then(function(max) {
+        var btn = document.getElementById('wm-max');
+        if (btn) btn.innerHTML = max ? '&#9634;' : '&#9633;';
+      });
+    });
+  </script>
+
+  <script>
+    // ── Tauri + Python bridge ──────────────────────────────────────
+    var TAURI_METHODS = {
+      pick_files:       function() { return window.__TAURI__.core.invoke('pick_files'); },
+      pick_folder:      function() { return window.__TAURI__.core.invoke('pick_folder'); },
+      pick_scan_folder: function() { return window.__TAURI__.core.invoke('pick_scan_folder'); },
+      open_folder:      function(path) { return window.__TAURI__.core.invoke('open_folder', { path: path }); },
+      notify_ready:     function() { __hideSplash(); return Promise.resolve(); },
+    };
+
+    var PACKER_PORT = 45291;
+
+    window.__bridgeReady = new Promise(function(resolve) {
+      var _initialized = false;
+
+      function init(port) {
+        if (_initialized) return;
+        _initialized = true;
+        var baseUrl = 'http://127.0.0.1:' + port;
+
+        window.pywebview = {
+          api: new Proxy({}, {
+            get: function(_, method) {
+              if (TAURI_METHODS[method]) return TAURI_METHODS[method];
+              return function(arg) {
+                return fetch(baseUrl + '/api/' + method, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(arg !== undefined ? arg : null),
+                }).then(function(r) { return r.json(); });
+              };
+            }
+          })
+        };
+
+        var es = new EventSource(baseUrl + '/events');
+        es.addEventListener('progress', function(e) {
+          if (window.__updateProgress) window.__updateProgress(JSON.parse(e.data));
+        });
+        es.addEventListener('batch_done', function() {
+          if (window.__onBatchDone) window.__onBatchDone();
+        });
+
+        console.log('[bridge] connected on port', port);
+        resolve(window.pywebview.api);
+      }
+
+      window.__TAURI__.event.listen('packer-ready', function(event) {
+        console.log('[bridge] packer-ready event, port=', event.payload);
+        init(event.payload);
+      });
+
+      (function poll() {
+        fetch('http://127.0.0.1:' + PACKER_PORT + '/api/load_settings', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: 'null',
+        })
+          .then(function() { console.log('[bridge] server up on fixed port', PACKER_PORT); init(PACKER_PORT); })
+          .catch(function() { setTimeout(poll, 200); });
+      })();
+
+      setTimeout(function() {
+        if (!_initialized) console.warn('[bridge] server did not start within 60s');
+      }, 60000);
+    });
+
+    window.__TAURI__.event.listen('tauri://drag-drop', function(event) {
+      var paths = event.payload && event.payload.paths ? event.payload.paths : event.payload;
+      if (window.__onFilesDropped) window.__onFilesDropped(paths);
+    });
+    window.__TAURI__.event.listen('tauri://drag-enter', function() {
+      if (window.__nativeDragEnter) window.__nativeDragEnter();
+    });
+    window.__TAURI__.event.listen('tauri://drag-leave', function() {
+      if (window.__nativeDragLeave) window.__nativeDragLeave();
+    });
+  </script>
+
+  <script src="parts.js"></script>
+  <script src="anno.js"></script>
+  <script src="modern.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

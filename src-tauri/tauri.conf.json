@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Anno DDS Packer",
+  "version": "1.1.0",
+  "identifier": "com.anno.ddspacker",
+  "build": {
+    "frontendDist": "../webui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Anno DDS Packer",
+        "width": 1600,
+        "height": 1000,
+        "minWidth": 1280,
+        "minHeight": 800,
+        "visible": false,
+        "decorations": false,
+        "backgroundColor": "#0B1828"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "nsis",
+    "icon": ["icons/icon.ico"],
+    "externalBin": ["binaries/packer-server"],
+    "resources": ["../tools/texconv.exe"]
+  }
+}

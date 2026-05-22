@@ -1,0 +1,19 @@
+# Rust / Tauri build artifacts
+src-tauri/target/
+
+# PyInstaller build output
+build_packer/
+build/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Byte-compiled
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
