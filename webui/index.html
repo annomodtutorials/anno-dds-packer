@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Anno DDS Packer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="lib/react.production.min.js"></script>
+  <script src="lib/react-dom.production.min.js"></script>
+  <!-- QWebChannel client lib provided by Qt's built-in resource scheme.
+       Must be loaded BEFORE the bridge connect block below. -->
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    // Surface any uncaught JS error / promise rejection through console so
+    // our LoggingPage subclass (Python side) sees it.
+    window.addEventListener('error', function(e) {
+      console.error('[uncaught] ' + (e.error && e.error.stack ? e.error.stack : e.message) +
+                    ' at ' + (e.filename || '?') + ':' + (e.lineno || '?'));
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error('[unhandled-rejection] ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
+    });
+  </script>
+  <script>
+    // Bridge bootstrap — connect to the Python Bridge QObject and shim it
+    // behind the legacy `window.pywebview.api.method(...)` Promise-style
+    // surface that the React code uses. QWebChannel slot calls take the
+    // declared args plus an optional final callback; we wrap each call in
+    // a Promise so `await api(...)` still works.
+    window.__bridgeReady = new Promise(function(resolve) {
+      // Polling fallback in case qwebchannel.js failed to load
+      function bind(channel) {
+        var bridge = channel.objects.bridge;
+        window.bridge = bridge;
+        window.pywebview = {
+          api: new Proxy({}, {
+            get: function(_, method) {
+              return function() {
+                var args = Array.prototype.slice.call(arguments);
+                return new Promise(function(res) {
+                  if (!bridge || typeof bridge[method] !== 'function') {
+                    res(null);
+                    return;
+                  }
+                  args.push(function(result) { res(result); });
+                  bridge[method].apply(bridge, args);
+                });
+              };
+            }
+          })
+        };
+        console.log('QWebChannel bridge ready; methods:',
+          Object.keys(bridge).filter(k => typeof bridge[k] === 'function').slice(0, 20));
+        resolve(bridge);
+      }
+      if (typeof QWebChannel === 'undefined' || typeof qt === 'undefined') {
+        console.error('QWebChannel transport unavailable — bridge will not work');
+        resolve(null);
+        return;
+      }
+      new QWebChannel(qt.webChannelTransport, bind);
+    });
+  </script>
+  <script src="parts.js"></script>
+  <script src="anno.js"></script>
+  <script src="modern.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
