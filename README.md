@@ -28,6 +28,20 @@ them back into editable PNGs, per channel.
 
 ---
 
+## Screenshots
+
+![Empty state](docs/screenshots/01_pack_empty.png)
+
+![Pack queue](docs/screenshots/02_pack_queue.png)
+
+![Converting](docs/screenshots/03_converting.png)
+
+![Done](docs/screenshots/04_pack_done.png)
+
+![Unpack mode](docs/screenshots/05_unpack_mode.png)
+
+---
+
 ## Requirements
 
 - **Windows 10 / 11 x64**
