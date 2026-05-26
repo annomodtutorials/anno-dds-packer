@@ -3,14 +3,6 @@
    Shared variables, stage scaling, and per-theme tokens.
    ───────────────────────────────────────────────────────────────────────── */
 
-@font-face {
-  font-family: 'OPTIAlert';
-  src: url('assets/OPTIAlert-Medium.otf') format('opentype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
 * { box-sizing: border-box; }
 
 html, body {
@@ -89,8 +81,8 @@ html, body {
   --amber-warn: #D89B4A;
   --completed-gold: #E6C57A;
 
-  --display-font: 'OPTIAlert', 'Cinzel', 'Georgia', serif;
-  --body-font: 'OPTIAlert', 'Cinzel', 'Georgia', serif;
+  --display-font: 'Cinzel', 'Georgia', serif;
+  --body-font: 'Cinzel', 'Georgia', serif;
   --mono-font: 'JetBrains Mono', Consolas, monospace;
 }
 
@@ -1602,9 +1594,9 @@ html, body {
   background-clip: padding-box;
 }
 
-/* ───────────── Footer polish — Anno uses OPTIAlert for legibility ───────────── */
+/* ───────────── Footer polish ───────────── */
 .theme-anno .footer {
-  font-family: 'OPTIAlert', 'Cinzel', serif;
+  font-family: 'Cinzel', 'Georgia', serif;
   font-size: 13px;
   letter-spacing: 0.02em;
 }
@@ -1617,7 +1609,7 @@ html, body {
 }
 .theme-anno .footer .vram .vram-value,
 .theme-anno .footer .parallel .value {
-  font-family: 'OPTIAlert', sans-serif;
+  font-family: 'Cinzel', sans-serif;
   letter-spacing: 0;
   color: var(--ivory);
 }
