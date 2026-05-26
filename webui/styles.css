@@ -220,7 +220,7 @@ html, body {
 .brand-title {
   font-family: var(--display-font);
   font-size: 28px;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--gold-500);
   line-height: 1.0;
@@ -782,7 +782,7 @@ html, body {
   border-radius: 10px;
   background: rgba(43, 42, 40, 0.6);
   color: var(--text-disabled);
-  font: 500 32px/1 var(--display-font);
+  font: 700 32px/1 var(--display-font);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   white-space: nowrap;
