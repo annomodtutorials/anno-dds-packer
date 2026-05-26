@@ -112,6 +112,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::get_packer_port,
             commands::pick_files,
+            commands::pick_dds_files,
             commands::pick_folder,
             commands::pick_scan_folder,
             commands::open_folder,

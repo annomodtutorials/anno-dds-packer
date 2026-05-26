@@ -1,6 +1,6 @@
 // Modern theme components
 
-function ModernHeroEmpty({ dragOver, onPickFiles, onPickFolder }) {
+function ModernHeroEmpty({ dragOver, onPickFiles, onPickFolder, unpackMode }) {
   return (
     <div className="hero-stack">
       <div className={`modern-drop-icon ${dragOver ? 'drag' : ''}`} style={{ marginTop: 32 }}>
@@ -18,18 +18,22 @@ function ModernHeroEmpty({ dragOver, onPickFiles, onPickFolder }) {
       </div>
 
       <div className="hero-headline" style={{ marginTop: 40 }}>
-        {dragOver ? 'Release to import images' : 'Drop image files or folders'}
+        {dragOver
+          ? (unpackMode ? 'Release to import DDS files' : 'Release to import images')
+          : (unpackMode ? 'Drop DDS files or folders' : 'Drop image files or folders')}
       </div>
       <div className="hero-body" style={dragOver ? { whiteSpace: 'nowrap', maxWidth: 'none' } : {}}>
         {dragOver
-          ? 'Drop your images to begin packing'
-          : "We'll auto-detect Diffuse, Normal, and Packed Metal+Roughness maps and convert them to game-ready DDS textures. PNG, JPG, TGA, BMP and TIFF all supported."}
+          ? (unpackMode ? 'Drop DDS files to begin unpacking' : 'Drop your images to begin packing')
+          : (unpackMode
+              ? "Drop Anno DDS texture files to unpack them back into individual PNG maps — Diffuse, Normal, Metalness, AO, Gloss and more."
+              : "We'll auto-detect Diffuse, Normal, and Packed Metal+Roughness maps and convert them to game-ready DDS textures. PNG, JPG, TGA, BMP and TIFF all supported.")}
       </div>
       {!dragOver && (
         <div className="hero-buttons">
           <button className="btn-ghost" onClick={onPickFiles}>
             <FileIcon color="#9893FC" />
-            Pick Files
+            {unpackMode ? 'Pick DDS Files' : 'Pick Files'}
           </button>
           <button className="btn-ghost" onClick={onPickFolder}>
             <FolderIcon color="#9893FC" />
@@ -41,15 +45,21 @@ function ModernHeroEmpty({ dragOver, onPickFiles, onPickFolder }) {
   );
 }
 
-function ModernQueueRow({ row, onShowLog, onRemove }) {
+function ModernQueueRow({ row, onShowLog, onRemove, unpackMode }) {
   const labelText =
-    row.status === 'done' ? 'COMPLETED' :
+    row.status === 'done' ? (unpackMode ? 'UNPACKED' : 'COMPLETED') :
     row.status === 'queued' ? 'WAITING IN QUEUE' :
     (row.label || row.status.toUpperCase());
 
-  const inputs = maybeInputChips(row.input_map_types);
-  const outputs = row.output_map_types || ['diff', 'norm', 'metal'];
   const done = new Set(row.maps_done || []);
+
+  // ── Pack mode ──────────────────────────────────────────────────────────
+  const packInputs = maybeInputChips(row.input_map_types);
+  const packOutputs = row.output_map_types || ['diff', 'norm', 'metal'];
+
+  // ── Unpack mode ────────────────────────────────────────────────────────
+  const unpackInputs = row.input_dds_types || [];
+  const unpackOutputs = row.output_png_types || [];
 
   // For packed maps (rm / orm) we return a list of icons so they render
   // with '+' between them, signalling the channels that were combined.
@@ -64,13 +74,13 @@ function ModernQueueRow({ row, onShowLog, onRemove }) {
     if (t === 'ao')     return [<ModernSunIcon size={26} color="#6B7280" />];
     if (t === 'height') return [<ModernCubeIcon size={26} color="#5DD49A" />];
     if (t === 'rm')     return [
-      <ModernCubeIcon size={26} color="#9CA3B0" />,   // metal
-      <ModernCubeIcon size={26} color="#F2B65A" />,   // roughness
+      <ModernCubeIcon size={26} color="#9CA3B0" />,
+      <ModernCubeIcon size={26} color="#F2B65A" />,
     ];
     if (t === 'orm')    return [
-      <ModernSunIcon size={26} color="#6B7280" />,    // AO
-      <ModernCubeIcon size={26} color="#F2B65A" />,   // roughness
-      <ModernCubeIcon size={26} color="#9CA3B0" />,   // metal
+      <ModernSunIcon size={26} color="#6B7280" />,
+      <ModernCubeIcon size={26} color="#F2B65A" />,
+      <ModernCubeIcon size={26} color="#9CA3B0" />,
     ];
     return [<ModernCubeIcon size={26} />];
   };
@@ -96,37 +106,56 @@ function ModernQueueRow({ row, onShowLog, onRemove }) {
           onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
         >✕</button>
       )}
+
+      {/* Column 1: name + input chips */}
       <div>
         <div className="row-name">{row.name}</div>
         <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-          {inputs.map((c, i) => {
-            const nodes = iconsFor(c);
-            return (
-              <span key={`${c.type}-${i}`} className="row-input-chip">
-                {nodes.map((n, j) => (
-                  <React.Fragment key={j}>
-                    {j > 0 && <span className="chip-plus">+</span>}
-                    {n}
-                  </React.Fragment>
-                ))}
-                <span className="label">{c.label}</span>
-              </span>
-            );
-          })}
+          {unpackMode
+            ? unpackInputs.map(mt => (
+                <div key={mt} className="dds-chip" style={{ marginRight: 8, marginBottom: 4 }}>
+                  <span className="dds-badge">DDS</span>
+                  {DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`}
+                </div>
+              ))
+            : packInputs.map((c, i) => {
+                const nodes = iconsFor(c);
+                return (
+                  <span key={`${c.type}-${i}`} className="row-input-chip">
+                    {nodes.map((n, j) => (
+                      <React.Fragment key={j}>
+                        {j > 0 && <span className="chip-plus">+</span>}
+                        {n}
+                      </React.Fragment>
+                    ))}
+                    <span className="label">{c.label}</span>
+                  </span>
+                );
+              })}
         </div>
       </div>
 
+      {/* Column 2: output chips */}
       <div>
-        <div className="row-output-label">Output DDS</div>
-        {outputs.map(mt => (
-          <div key={mt} className="dds-chip">
-            <span className="dds-badge">DDS</span>
-            {DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`}
-            {(row.status === 'done' || done.has(mt)) && <span className="check" style={{color:'#5DD49A'}}>✓</span>}
-          </div>
-        ))}
+        <div className="row-output-label">{unpackMode ? 'Output PNG' : 'Output DDS'}</div>
+        {unpackMode
+          ? unpackOutputs.map(pt => (
+              <div key={pt} className="dds-chip">
+                <span className="png-badge">PNG</span>
+                {PNG_OUTPUT_LABEL[pt] || `${pt.toUpperCase()}.PNG`}
+                {(row.status === 'done' || done.has(pt)) && <span className="check" style={{color:'#5DD49A'}}>✓</span>}
+              </div>
+            ))
+          : packOutputs.map(mt => (
+              <div key={mt} className="dds-chip">
+                <span className="dds-badge">DDS</span>
+                {DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`}
+                {(row.status === 'done' || done.has(mt)) && <span className="check" style={{color:'#5DD49A'}}>✓</span>}
+              </div>
+            ))}
       </div>
 
+      {/* Column 3: status */}
       <div className="row-status" data-status={row.status}>
         <Donut pct={row.pct} status={row.status} theme="modern" />
         <div className="row-status-text">
@@ -153,22 +182,23 @@ function ModernQueueRow({ row, onShowLog, onRemove }) {
   );
 }
 
-function ModernQueue({ rows, onClear, canClear, onAddFiles, onAddFolder, onShowLog, onRemove }) {
+function ModernQueue({ rows, onClear, canClear, onAddFiles, onAddFolder, onShowLog, onRemove, unpackMode }) {
   const inProgress = rows.filter(r => r.status !== 'queued').length;
+  const queueTitle = unpackMode ? 'Unpack Queue' : 'Conversion Queue';
   return (
     <div className="queue">
       <div className="queue-header" style={{ position: 'relative' }}>
         {canClear && (
           <div className="queue-actions left">
             <button className="queue-action-btn" onClick={onAddFiles} title="Add files">
-              <FileIcon color="#9893FC" /> Add Files
+              <FileIcon color="#9893FC" /> {unpackMode ? 'Add DDS' : 'Add Files'}
             </button>
             <button className="queue-action-btn" onClick={onAddFolder} title="Add folder">
               <FolderIcon color="#9893FC" /> Add Folder
             </button>
           </div>
         )}
-        Conversion Queue <span className="count">{inProgress} of {rows.length}</span>
+        {queueTitle} <span className="count">{inProgress} of {rows.length}</span>
         {canClear && (
           <button className="queue-clear-btn" onClick={onClear} title="Clear queue">
             Clear ✕
@@ -176,7 +206,7 @@ function ModernQueue({ rows, onClear, canClear, onAddFiles, onAddFolder, onShowL
         )}
       </div>
       <div className="queue-list">
-        {rows.map(r => <ModernQueueRow key={r.set_id} row={r} onShowLog={onShowLog} onRemove={onRemove} />)}
+        {rows.map(r => <ModernQueueRow key={r.set_id} row={r} onShowLog={onShowLog} onRemove={onRemove} unpackMode={unpackMode} />)}
       </div>
     </div>
   );

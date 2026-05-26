@@ -1204,11 +1204,11 @@ html, body {
 .theme-modern .row-output-label { letter-spacing: 0.06em; font-weight: 500; }
 
 .dds-chip {
-  display: flex; align-items: center; gap: 12px;
-  padding: 6px 12px;
+  display: flex; align-items: center;
+  padding: 9px 14px;
   border: 1px solid var(--gold-700);
   border-radius: 6px;
-  font: 500 13px/1 var(--body-font);
+  font: 500 13px/1.2 var(--body-font);
   letter-spacing: 0.04em;
   color: var(--ivory);
   margin-bottom: 4px;
@@ -1216,8 +1216,8 @@ html, body {
 }
 .theme-modern .dds-chip {
   border: none;
-  padding: 6px 0;
-  font: 500 13px/1 var(--body-font);
+  padding: 9px 0;
+  font: 500 13px/1.2 var(--body-font);
   color: var(--text);
   letter-spacing: 0;
 }
@@ -1240,8 +1240,84 @@ html, body {
 }
 .dds-chip .check {
   margin-left: auto;
+  padding-left: 10px;
   color: var(--green-success);
-  font-size: 18px;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ── Wrong-mode drop toast ──────────────────────────────────────────────── */
+.wrong-mode-toast {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px;
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.75);
+  pointer-events: all;
+  min-width: 340px;
+  animation: wrong-toast-in 0.18s ease;
+}
+@keyframes wrong-toast-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 14px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+.theme-anno .wrong-mode-toast {
+  background: #0b1325;
+  border: 1px solid var(--gold-500);
+}
+.theme-modern .wrong-mode-toast {
+  background: #1a1c2e;
+  border: 1px solid var(--accent-500);
+}
+.wrong-mode-toast .toast-icon {
+  font-size: 22px; flex-shrink: 0; opacity: 0.9;
+}
+.wrong-mode-toast .toast-msg {
+  font: 500 13px/1.45 var(--body-font);
+  color: var(--ivory);
+  flex: 1;
+}
+.theme-modern .wrong-mode-toast .toast-msg { color: var(--text); }
+.wrong-mode-toast .toast-switch {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font: 600 11px/1 var(--body-font);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  background: rgba(201, 161, 82, 0.18);
+  border: 1px solid var(--gold-500);
+  color: var(--gold-400, #e6c57a);
+}
+.wrong-mode-toast .toast-switch:hover {
+  background: rgba(201, 161, 82, 0.32);
+}
+.theme-modern .wrong-mode-toast .toast-switch {
+  background: rgba(107, 95, 255, 0.18);
+  border-color: var(--accent-500);
+  color: var(--accent-glow, #a89bff);
+}
+.theme-modern .wrong-mode-toast .toast-switch:hover {
+  background: rgba(107, 95, 255, 0.32);
+}
+.wrong-mode-toast .toast-close {
+  flex-shrink: 0;
+  width: 24px; height: 24px; padding: 0;
+  border-radius: 5px;
+  font-size: 11px; line-height: 1;
+  cursor: pointer;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.45);
+  display: flex; align-items: center; justify-content: center;
+}
+.wrong-mode-toast .toast-close:hover {
+  background: rgba(192,57,43,0.5);
+  color: #fff; border-color: rgba(192,57,43,0.8);
 }
 
 /* Status block */
@@ -1849,6 +1925,60 @@ html, body {
   border-color: var(--accent-500);
   color: var(--text);
   background: rgba(107, 95, 255, 0.10);
+}
+
+/* ─────────────  Pack / Unpack mode toggle  ───────────── */
+.mode-toggle-block {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.mode-toggle {
+  display: flex;
+  border: 1px solid rgba(201,161,82,0.3);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.mode-btn {
+  height: 44px; min-width: 68px;
+  padding: 0 16px;
+  font-family: var(--body-font);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: none; background: transparent;
+  color: rgba(201,161,82,0.45);
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+  white-space: nowrap;
+}
+.mode-btn.active {
+  background: rgba(201,161,82,0.18);
+  color: #C9A152;
+}
+.mode-btn:not(.active):hover { background: rgba(201,161,82,0.08); }
+
+.theme-modern .mode-toggle { border-color: rgba(152,147,252,0.3); }
+.theme-modern .mode-btn { color: rgba(152,147,252,0.45); }
+.theme-modern .mode-btn.active { background: rgba(152,147,252,0.18); color: #9893FC; }
+.theme-modern .mode-btn:not(.active):hover { background: rgba(152,147,252,0.08); }
+
+/* PNG output badge -- green, used in unpack mode output column */
+.png-badge {
+  width: 38px; height: 18px;
+  border: 1px solid #5DD49A;
+  border-radius: 3px;
+  font: 700 9px/1 var(--body-font);
+  display: grid; place-items: center;
+  color: #5DD49A;
+  letter-spacing: 0.12em;
+  flex-shrink: 0;
+}
+.theme-modern .png-badge {
+  background: rgba(93,212,154,0.15);
+  border: none;
+  color: #5DD49A;
+  font: 700 10px/1 var(--body-font);
+  width: 38px; height: 22px;
+  border-radius: 5px;
 }
 
 /* ─────────────  LOD chip vertical alignment  ───────────── */

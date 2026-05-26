@@ -29,7 +29,7 @@ def settings_path() -> Path:
 class Settings:
     output_dir: str = ""
     same_as_input: bool = True
-    fast_mode: bool = False
+    fast_mode: bool = True   # always-on; toggle removed from UI
     selected_lods: list[int] = field(default_factory=lambda: [0])
     lod0_size: str = LOD0_SIZE_AS_INPUT
     theme_name: str = "anno"

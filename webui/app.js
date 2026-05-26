@@ -1,6 +1,6 @@
 const LOD0_SIZE_OPTIONS = ["As input", "4096", "2048", "1024", "512", "256"];
-function HelpDialog({ onClose }) {
-  return /* @__PURE__ */ React.createElement("div", { className: "scrim", onClick: onClose }, /* @__PURE__ */ React.createElement("div", { className: "help-dialog", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("div", { className: "help-title-row" }, /* @__PURE__ */ React.createElement("div", { className: "help-title" }, "Help & Channel Reference"), /* @__PURE__ */ React.createElement("button", { className: "help-close", onClick: onClose }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "help-body" }, /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "What this tool does")), /* @__PURE__ */ React.createElement("p", null, "Anno 117 DDS Packer turns standard PBR PNG exports \u2014 the kind you get out of Blender, Substance, or any AI 3D generator \u2014 into the BC7-encoded DDS textures the Anno 117 modding pipeline expects. It auto-detects which PNG is which (diffuse, normal, metalness, etc.), repacks channels into Anno's convention, generates the LOD chain, and writes the ", /* @__PURE__ */ React.createElement("span", { className: "code" }, ".dds"), " files you can drop straight into your mod folder.")), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "What is a DDS?")), /* @__PURE__ */ React.createElement("p", null, "DirectDraw Surface \u2014 a GPU-native image container. Anno uses BC7, a high-quality block-compressed format that stores 4\xD74 pixel tiles with per-block compression modes. Encoding is slow; decoding is free on the GPU. That's why the game ships these instead of PNGs.")), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Anno channel-packing convention")), /* @__PURE__ */ React.createElement("table", { className: "help-table" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", null, "DDS"), /* @__PURE__ */ React.createElement("th", null, "RGB"), /* @__PURE__ */ React.createElement("th", null, "A"))), /* @__PURE__ */ React.createElement("tbody", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Diffuse"), /* @__PURE__ */ React.createElement("td", null, "Albedo (sRGB)"), /* @__PURE__ */ React.createElement("td", null, "Opacity")), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Metal"), /* @__PURE__ */ React.createElement("td", null, "Metalness (grayscale, linear)"), /* @__PURE__ */ React.createElement("td", null, "Ambient Occlusion")), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Normal"), /* @__PURE__ */ React.createElement("td", null, "DirectX tangent normal (linear)"), /* @__PURE__ */ React.createElement("td", null, "Glossiness (= 1 \u2212 roughness)")), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Height"), /* @__PURE__ */ React.createElement("td", null, "Grayscale displacement (linear)"), /* @__PURE__ */ React.createElement("td", null, "\u2014"))))), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Filename suffixes the auto-detector recognises")), /* @__PURE__ */ React.createElement("table", { className: "help-table" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", null, "Channel"), /* @__PURE__ */ React.createElement("th", null, "Suffixes"))), /* @__PURE__ */ React.createElement("tbody", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Diffuse / albedo"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_diff"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_diffuse"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_albedo"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_color"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_basecolor"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_bc"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Opacity"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_opacity"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_opc"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_alpha"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Metalness"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_metal"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_metalness"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_metallic"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Ambient occlusion"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_ao"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_ambientocclusion"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Normal"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_norm"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_normal"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_nrm"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Glossiness / Roughness"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_gloss"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_glossiness"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_rough"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_roughness"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Height / Displacement"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_height"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_disp"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_displacement"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Packed Rough+Metal"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_rm"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Packed Occ+Rough+Metal"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_orm"))))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: 10, fontSize: 13, opacity: 0.85 } }, "Matching is case-insensitive and tolerant of ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "."), ", ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_"), ", ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "-"), ' separators. Base name = filename minus suffix minus extension; files that share a base name are bundled into a "set".')), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Packed map handling")), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_rm"), " (G = roughness \u2192 glossiness, B = metalness) \u2192 ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "metal.RGB"), " \u2190 B replicated; ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "normal.A"), " \u2190 1 \u2212 G."), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_orm"), " (R = AO, G = roughness, B = metalness) \u2192 ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "metal.RGB"), " \u2190 B replicated; ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "metal.A"), " \u2190 R; ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "normal.A"), " \u2190 1 \u2212 G.")), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Missing-channel synthesis")), /* @__PURE__ */ React.createElement("p", null, "If only ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_diff"), " and ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_rm"), " are supplied (no ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_normal"), "), the tool synthesises a flat normal with RGB = (128, 128, 255) and packs ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "1 \u2212 G_rm"), " into its alpha. NORMAL.DDS will be valid; only the surface micro-detail is missing. You'll get a one-time warning per set.")), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "LODs")), /* @__PURE__ */ React.createElement("p", null, "LODs are the texture's mip chain pre-baked at decreasing resolutions: LOD0 = 1\xD7, LOD1 = \xBD\xD7, LOD2 = \xBC\xD7, LOD3 = \u215B\xD7, LOD4 = \xB9\u2044\u2081\u2086\xD7. Disabling LODs saves disk space but distant LODs look blurry. ", /* @__PURE__ */ React.createElement("strong", null, "LOD0 is always written"), " \u2014 its checkbox is locked on.")), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Fast mode")), /* @__PURE__ */ React.createElement("p", null, "BC7 encoding sweeps many block modes to find the best per-tile. Fast mode prunes the search to modes that statistically win \u2265 95% of the time. Output is visually identical in 99.x% of cases on Anno-style material textures. Speedup \u2248 ", /* @__PURE__ */ React.createElement("strong", null, "1.5\xD7"), ". Use during iteration; turn off for release builds.")), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Parallel sets")), /* @__PURE__ */ React.createElement("p", null, `A "set" is one base-name's worth of inputs (diffuse + normal + \u2026). The encoder runs multiple sets concurrently \u2014 one worker thread per GPU encode queue. The cap shown in the footer is `, /* @__PURE__ */ React.createElement("span", { className: "code" }, "min(cpu_count(), 8)"), ". Raise it in ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "%APPDATA%/AnnoDDSPacker/settings.json \u2192 parallelSetsMax"), "."))), /* @__PURE__ */ React.createElement("div", { className: "help-actions" }, /* @__PURE__ */ React.createElement("button", { className: "btn-got-it", onClick: onClose }, "Got it"))));
+function HelpDialog({ onClose, unpackMode }) {
+  return /* @__PURE__ */ React.createElement("div", { className: "scrim", onClick: onClose }, /* @__PURE__ */ React.createElement("div", { className: "help-dialog", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("div", { className: "help-title-row" }, /* @__PURE__ */ React.createElement("div", { className: "help-title" }, unpackMode ? "Help \u2014 Unpack Mode" : "Help & Channel Reference"), /* @__PURE__ */ React.createElement("button", { className: "help-close", onClick: onClose }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "help-body" }, /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "What this tool does")), unpackMode ? /* @__PURE__ */ React.createElement("p", null, "Anno DDS Unpacker reads Anno-format DDS texture files and splits each one back into individual, properly-decoded PNG maps \u2014 Diffuse, Opacity, Normal, Roughness, Metal, AO, Height, and Emission. Normal maps are automatically converted from Anno's DirectX convention (Y-down) to the OpenGL convention (Y-up) that Blender and Maya use. Drop in ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_diff"), ", ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_norm"), ", ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_metal"), ", ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_height"), ", and ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_mask"), " DDS files and get clean, channel-correct PNGs ready for your 3D workflow.") : /* @__PURE__ */ React.createElement("p", null, "Anno DDS Packer converts standard PBR texture exports \u2014 from Blender, Substance, or any AI 3D generator \u2014 into the BC7-encoded DDS textures the Anno modding pipeline expects. It auto-detects which file is which, repacks channels into Anno's convention, generates the LOD chain, and writes the ", /* @__PURE__ */ React.createElement("span", { className: "code" }, ".dds"), " files you can drop straight into your mod folder. The ", /* @__PURE__ */ React.createElement("strong", null, "Unpack"), " mode does the reverse: it reads Anno DDS files and splits them back into individual PNG maps.")), unpackMode && /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Why not just use the RDA extractor?")), /* @__PURE__ */ React.createElement("p", null, "The RDA extractor (the popular GitHub tool for pulling assets out of Anno game files) exports DDS textures as PNG \u2014 but it does a raw decode with no channel awareness. That means:"), /* @__PURE__ */ React.createElement("ul", { style: { paddingLeft: 18, marginTop: 6, lineHeight: 1.7 } }, /* @__PURE__ */ React.createElement("li", null, "The ", /* @__PURE__ */ React.createElement("strong", null, "Diffuse DDS"), " contains Opacity in its alpha channel. The RDA extractor bakes this alpha straight into the PNG \u2014 you get a transparent PNG, not an Albedo texture. Trying to use it in Blender gives you a partially transparent material."), /* @__PURE__ */ React.createElement("li", null, "The ", /* @__PURE__ */ React.createElement("strong", null, "Normal DDS"), " alpha contains Glossiness data. When baked into the PNG it corrupts the appearance of the normal in any standard viewer."), /* @__PURE__ */ React.createElement("li", null, "The ", /* @__PURE__ */ React.createElement("strong", null, "Metal DDS"), " alpha contains AO. Same problem \u2014 the AO gets baked into what looks like a Metalness map."), /* @__PURE__ */ React.createElement("li", null, "Anno uses the ", /* @__PURE__ */ React.createElement("strong", null, "DirectX normal convention"), " (green channel Y-down). The RDA extractor outputs these as-is, so normals appear inverted in Blender and Maya (which expect OpenGL, Y-up). You'd have to flip the green channel manually.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: 8 } }, "This tool handles all of that for you: it splits every DDS into its correct individual maps, discards trivially-uniform alpha channels (so you don't get a pointless fully-opaque file), and converts normals to OpenGL so they work immediately in your 3D app.")), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "What is a DDS?")), /* @__PURE__ */ React.createElement("p", null, "DirectDraw Surface \u2014 a GPU-native image container. Anno uses BC7, a high-quality block-compressed format that stores 4\xD74 pixel tiles with per-block compression modes. Encoding is slow; decoding is free on the GPU. That's why the game ships these instead of PNGs.")), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Anno channel-packing convention")), /* @__PURE__ */ React.createElement("table", { className: "help-table" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", null, "DDS"), /* @__PURE__ */ React.createElement("th", null, "RGB"), /* @__PURE__ */ React.createElement("th", null, "A"))), /* @__PURE__ */ React.createElement("tbody", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Diffuse"), /* @__PURE__ */ React.createElement("td", null, "Albedo (sRGB)"), /* @__PURE__ */ React.createElement("td", null, "Opacity")), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Metal"), /* @__PURE__ */ React.createElement("td", null, "Metalness (grayscale, linear)"), /* @__PURE__ */ React.createElement("td", null, "Ambient Occlusion")), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Normal"), /* @__PURE__ */ React.createElement("td", null, "DirectX tangent normal (linear)"), /* @__PURE__ */ React.createElement("td", null, "Glossiness (= 1 \u2212 roughness)")), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Height"), /* @__PURE__ */ React.createElement("td", null, "Grayscale displacement (linear)"), /* @__PURE__ */ React.createElement("td", null, "\u2014")), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Mask"), /* @__PURE__ */ React.createElement("td", null, "Emission / night-glow mask (linear)"), /* @__PURE__ */ React.createElement("td", null, "Secondary night mask"))))), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Filename suffixes the auto-detector recognises")), /* @__PURE__ */ React.createElement("table", { className: "help-table" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", null, "Channel"), /* @__PURE__ */ React.createElement("th", null, "Suffixes"))), /* @__PURE__ */ React.createElement("tbody", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Diffuse / albedo"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_diff"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_diffuse"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_albedo"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_color"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_basecolor"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_bc"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Opacity"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_opacity"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_opc"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_alpha"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Metalness"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_metal"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_metalness"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_metallic"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Ambient occlusion"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_ao"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_ambientocclusion"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Normal"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_norm"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_normal"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_nrm"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Glossiness / Roughness"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_gloss"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_glossiness"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_rough"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_roughness"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Height / Displacement"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_height"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_disp"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_displacement"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Packed Rough+Metal"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_rm"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Packed Occ+Rough+Metal"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_orm"))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", null, "Emission / night mask"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_emission"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_emissive"), " ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_nightmask"))))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: 10, fontSize: 13, opacity: 0.85 } }, "Matching is case-insensitive and tolerant of ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "."), ", ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_"), ", ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "-"), ' separators. Base name = filename minus suffix minus extension; files that share a base name are bundled into a "set".')), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Packed map handling")), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_rm"), " (G = roughness \u2192 glossiness, B = metalness) \u2192 ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "metal.RGB"), " \u2190 B replicated; ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "normal.A"), " \u2190 1 \u2212 G."), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("span", { className: "code" }, "_orm"), " (R = AO, G = roughness, B = metalness) \u2192 ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "metal.RGB"), " \u2190 B replicated; ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "metal.A"), " \u2190 R; ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "normal.A"), " \u2190 1 \u2212 G.")), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Missing-channel synthesis")), /* @__PURE__ */ React.createElement("p", null, "If only ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_diff"), " and ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_rm"), " are supplied (no ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "_normal"), "), the tool synthesises a flat normal with RGB = (128, 128, 255) and packs ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "1 \u2212 G_rm"), " into its alpha. NORMAL.DDS will be valid; only the surface micro-detail is missing. You'll get a one-time warning per set.")), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "LODs")), /* @__PURE__ */ React.createElement("p", null, "LODs are the texture's mip chain pre-baked at decreasing resolutions: LOD0 = 1\xD7, LOD1 = \xBD\xD7, LOD2 = \xBC\xD7, LOD3 = \u215B\xD7, LOD4 = \xB9\u2044\u2081\u2086\xD7. Disabling LODs saves disk space but distant LODs look blurry. ", /* @__PURE__ */ React.createElement("strong", null, "LOD0 is always written"), " \u2014 its checkbox is locked on.")), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Fast mode")), /* @__PURE__ */ React.createElement("p", null, "BC7 encoding sweeps many block modes to find the best per-tile. Fast mode prunes the search to modes that statistically win \u2265 95% of the time. Output is visually identical in 99.x% of cases on Anno-style material textures. Speedup \u2248 ", /* @__PURE__ */ React.createElement("strong", null, "1.5\xD7"), ". Fast mode is always enabled \u2014 for Anno textures there is no perceptible quality difference.")), /* @__PURE__ */ React.createElement("section", { className: "help-section" }, /* @__PURE__ */ React.createElement("div", { className: "help-section-title" }, /* @__PURE__ */ React.createElement("span", { className: "strip" }), /* @__PURE__ */ React.createElement("h3", null, "Parallel sets")), /* @__PURE__ */ React.createElement("p", null, `A "set" is one base-name's worth of inputs (diffuse + normal + \u2026). The encoder runs multiple sets concurrently \u2014 one worker thread per GPU encode queue. The cap shown in the footer is `, /* @__PURE__ */ React.createElement("span", { className: "code" }, "min(cpu_count(), 8)"), ". Raise it in ", /* @__PURE__ */ React.createElement("span", { className: "code" }, "%APPDATA%/AnnoDDSPacker/settings.json \u2192 parallelSetsMax"), "."))), /* @__PURE__ */ React.createElement("div", { className: "help-actions" }, /* @__PURE__ */ React.createElement("button", { className: "btn-got-it", onClick: onClose }, "Got it"))));
 }
 function FolderPickerMenu({ onSameAsInput, onPickFolder, sameAsInput, onClose }) {
   return /* @__PURE__ */ React.createElement("div", { className: "picker-flyout", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("button", { className: "picker-row", onClick: () => {
@@ -9,12 +9,24 @@ function FolderPickerMenu({ onSameAsInput, onPickFolder, sameAsInput, onClose })
   } }, /* @__PURE__ */ React.createElement("span", { className: "picker-icon" }, "\u{1F4C1}"), " Choose folder\u2026"), /* @__PURE__ */ React.createElement("button", { className: "picker-row", onClick: () => {
     onSameAsInput(!sameAsInput);
     onClose();
-  } }, /* @__PURE__ */ React.createElement("span", { className: "picker-check" }, sameAsInput ? "\u2713" : " "), " Same as input folder"), /* @__PURE__ */ React.createElement("div", { className: "picker-hint" }, 'Tip: "Same as input" only resolves real folder paths for files added via ', /* @__PURE__ */ React.createElement("strong", null, "Pick Folder"), " / ", /* @__PURE__ */ React.createElement("strong", null, "Pick Files"), ". Drag-dropped files have no disk path and will land in the Output Folder above."));
+  } }, /* @__PURE__ */ React.createElement("span", { className: "picker-check" }, sameAsInput ? "\u2713" : " "), " Same as input folder"));
 }
-function Header({ theme, lodOn, setLodOn, fastMode, setFastMode, outputFolder, sameAsInput, setSameAsInput, lod0Size, setLod0Size, onHelp, onPickFolder }) {
+function Header({ theme, lodOn, setLodOn, outputFolder, sameAsInput, setSameAsInput, lod0Size, setLod0Size, onHelp, onPickFolder, unpackMode, onModeSwitch }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [lod0Open, setLod0Open] = useState(false);
-  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "brand" }, /* @__PURE__ */ React.createElement("div", { className: "brand-logo anno" }, /* @__PURE__ */ React.createElement("img", { src: "assets/anno_brand_logo.png", alt: "" })), /* @__PURE__ */ React.createElement("div", { className: "brand-text" }, /* @__PURE__ */ React.createElement("div", { className: "brand-title" }, "Anno DDS Packer"), /* @__PURE__ */ React.createElement("div", { className: "brand-subtitle" }, theme === "anno" ? "Convert PNG Maps to Game-Ready DDS Textures" : "Convert PNG maps to game-ready DDS textures"))), /* @__PURE__ */ React.createElement("div", { className: "settings", style: { left: 500 } }, /* @__PURE__ */ React.createElement("div", { className: "setting-block" }, /* @__PURE__ */ React.createElement("div", { className: "setting-label" }, "Output Folder"), /* @__PURE__ */ React.createElement("div", { className: "entry-row" }, /* @__PURE__ */ React.createElement(
+  useEffect(() => {
+    if (!pickerOpen && !lod0Open) return;
+    const close = () => {
+      setPickerOpen(false);
+      setLod0Open(false);
+    };
+    const tid = setTimeout(() => document.addEventListener("click", close), 0);
+    return () => {
+      clearTimeout(tid);
+      document.removeEventListener("click", close);
+    };
+  }, [pickerOpen, lod0Open]);
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "brand" }, /* @__PURE__ */ React.createElement("div", { className: "brand-logo anno" }, /* @__PURE__ */ React.createElement("img", { src: "assets/anno_brand_logo.png", alt: "" })), /* @__PURE__ */ React.createElement("div", { className: "brand-text" }, /* @__PURE__ */ React.createElement("div", { className: "brand-title" }, "Anno DDS Packer"), /* @__PURE__ */ React.createElement("div", { className: "brand-subtitle" }, unpackMode ? theme === "anno" ? "Unpack DDS Textures to PNG Maps" : "Unpack DDS textures to PNG maps" : theme === "anno" ? "Convert PNG Maps to Game-Ready DDS Textures" : "Convert PNG maps to game-ready DDS textures"))), /* @__PURE__ */ React.createElement("div", { className: "settings", style: { left: 500 } }, /* @__PURE__ */ React.createElement("div", { className: "setting-block" }, /* @__PURE__ */ React.createElement("div", { className: "setting-label" }, "Output Folder"), /* @__PURE__ */ React.createElement("div", { className: "entry-row" }, /* @__PURE__ */ React.createElement(
     "input",
     {
       className: "entry",
@@ -52,15 +64,21 @@ function Header({ theme, lodOn, setLodOn, fastMode, setFastMode, outputFolder, s
       theme,
       onToggle: () => setLodOn((s) => ({ ...s, [n]: !s[n] }))
     }
-  )))))), /* @__PURE__ */ React.createElement("div", { className: "header-right" }, /* @__PURE__ */ React.createElement("div", { className: "fast-mode-block" }, /* @__PURE__ */ React.createElement("div", { className: "setting-label" }, "Fast Mode"), /* @__PURE__ */ React.createElement(
-    "div",
+  )))))), /* @__PURE__ */ React.createElement("div", { className: "header-right" }, /* @__PURE__ */ React.createElement("div", { className: "mode-toggle-block" }, /* @__PURE__ */ React.createElement("div", { className: "setting-label" }, "Mode"), /* @__PURE__ */ React.createElement("div", { className: "mode-toggle" }, /* @__PURE__ */ React.createElement(
+    "button",
     {
-      className: "toggle",
-      "data-on": fastMode,
-      onClick: () => setFastMode((v) => !v)
+      className: `mode-btn${!unpackMode ? " active" : ""}`,
+      onClick: () => onModeSwitch(false)
     },
-    /* @__PURE__ */ React.createElement("div", { className: "thumb" })
-  )), /* @__PURE__ */ React.createElement("button", { className: "icon-btn", onClick: onHelp }, "?")), theme === "anno" && /* @__PURE__ */ React.createElement("div", { className: "anno-header-divider" }), theme === "modern" && /* @__PURE__ */ React.createElement("div", { className: "modern-header-divider" }));
+    "Pack"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: `mode-btn${unpackMode ? " active" : ""}`,
+      onClick: () => onModeSwitch(true)
+    },
+    "Unpack"
+  ))), /* @__PURE__ */ React.createElement("button", { className: "icon-btn", onClick: onHelp }, "?")), theme === "anno" && /* @__PURE__ */ React.createElement("div", { className: "anno-header-divider" }), theme === "modern" && /* @__PURE__ */ React.createElement("div", { className: "modern-header-divider" }));
 }
 function Footer({ theme, mode, vram, parallel, onToggleTheme }) {
   const working = mode === "converting";
@@ -68,10 +86,11 @@ function Footer({ theme, mode, vram, parallel, onToggleTheme }) {
   const vramPct = vram && vram.total ? Math.min(1, vram.used / vram.total) * 100 : 0;
   return /* @__PURE__ */ React.createElement("div", { className: "footer" }, /* @__PURE__ */ React.createElement("div", { className: "status", "data-state": working ? "working" : "ready" }, /* @__PURE__ */ React.createElement(PulseDot, null), working ? "Working" : "Ready"), /* @__PURE__ */ React.createElement("div", { className: "footer-center" }, /* @__PURE__ */ React.createElement("div", { className: "vram" }, /* @__PURE__ */ React.createElement("span", { className: "vram-label" }, "VRAM"), /* @__PURE__ */ React.createElement("div", { className: "vram-bar" }, /* @__PURE__ */ React.createElement("div", { className: "vram-fill", style: { width: `${vramPct}%` } })), /* @__PURE__ */ React.createElement("span", { className: "vram-value" }, vramText)), /* @__PURE__ */ React.createElement("div", { className: "sep-dot" }), /* @__PURE__ */ React.createElement("div", { className: "parallel" }, /* @__PURE__ */ React.createElement("span", null, "Parallel Sets"), /* @__PURE__ */ React.createElement("span", { className: "parallel-glyph" }, /* @__PURE__ */ React.createElement(ParallelStackIcon, null)), /* @__PURE__ */ React.createElement("span", { className: "value" }, parallel.active, " / ", parallel.cap), working && theme === "modern" && /* @__PURE__ */ React.createElement("span", { className: "gpu-pulse" }))), /* @__PURE__ */ React.createElement("div", { className: "theme-switch", onClick: onToggleTheme }, /* @__PURE__ */ React.createElement("span", null, theme === "anno" ? "ANNO" : "MODERN"), /* @__PURE__ */ React.createElement("span", { className: "pill" })));
 }
-function ConvertButton({ theme, mode, enabled, onClick }) {
+function ConvertButton({ theme, mode, enabled, onClick, unpackMode }) {
   const running = mode === "converting";
   const cls = `convert-bar ${running ? "running" : enabled ? "ready" : ""}`;
-  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "diamond-divider above" }, /* @__PURE__ */ React.createElement("div", { className: "line left" }), /* @__PURE__ */ React.createElement("div", { className: "line right" }), /* @__PURE__ */ React.createElement("img", { src: "assets/diamond.png", alt: "" })), /* @__PURE__ */ React.createElement("div", { className: cls, onClick: running || !enabled ? void 0 : onClick }, theme === "anno" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "convert-laurel left" }, /* @__PURE__ */ React.createElement("img", { src: "assets/laurel_left.png", alt: "" })), /* @__PURE__ */ React.createElement("div", { className: "convert-laurel right" }, /* @__PURE__ */ React.createElement("img", { src: "assets/laurel_right.png", alt: "" }))), running && /* @__PURE__ */ React.createElement(ConvertSpinner, null), /* @__PURE__ */ React.createElement("span", { className: "convert-caption" }, running ? "Converting\u2026" : "Convert to DDS")), /* @__PURE__ */ React.createElement("div", { className: "diamond-divider below" }, /* @__PURE__ */ React.createElement("div", { className: "line left" }), /* @__PURE__ */ React.createElement("div", { className: "line right" }), /* @__PURE__ */ React.createElement("img", { src: "assets/diamond.png", alt: "" })));
+  const caption = running ? unpackMode ? "Unpacking\u2026" : "Converting\u2026" : unpackMode ? "Unpack to PNG" : "Convert to DDS";
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "diamond-divider above" }, /* @__PURE__ */ React.createElement("div", { className: "line left" }), /* @__PURE__ */ React.createElement("div", { className: "line right" }), /* @__PURE__ */ React.createElement("img", { src: "assets/diamond.png", alt: "" })), /* @__PURE__ */ React.createElement("div", { className: cls, onClick: running || !enabled ? void 0 : onClick }, theme === "anno" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "convert-laurel left" }, /* @__PURE__ */ React.createElement("img", { src: "assets/laurel_left.png", alt: "" })), /* @__PURE__ */ React.createElement("div", { className: "convert-laurel right" }, /* @__PURE__ */ React.createElement("img", { src: "assets/laurel_right.png", alt: "" }))), running && /* @__PURE__ */ React.createElement(ConvertSpinner, null), /* @__PURE__ */ React.createElement("span", { className: "convert-caption" }, caption)), /* @__PURE__ */ React.createElement("div", { className: "diamond-divider below" }, /* @__PURE__ */ React.createElement("div", { className: "line left" }), /* @__PURE__ */ React.createElement("div", { className: "line right" }), /* @__PURE__ */ React.createElement("img", { src: "assets/diamond.png", alt: "" })));
 }
 async function api(method, ...args) {
   if (!window.pywebview || !window.pywebview.api) return null;
@@ -97,7 +116,6 @@ function App() {
   const [theme, setTheme] = useState("anno");
   const [mode, setMode] = useState("idle");
   const [lodOn, setLodOn] = useState({ 0: true, 1: false, 2: false, 3: false, 4: false });
-  const [fastMode, setFastMode] = useState(false);
   const [sameAsInput, setSameAsInput] = useState(true);
   const [outputFolder, setOutputFolder2] = useState("");
   const [lod0Size, setLod0Size] = useState("As input");
@@ -106,6 +124,12 @@ function App() {
   const [vram, setVram] = useState({ used: 0, total: 0 });
   const [parallel, setParallel] = useState({ active: 0, cap: 8 });
   const [errorModal, setErrorModal] = useState(null);
+  const [unpackMode, setUnpackMode] = useState(false);
+  const [overwritePending, setOverwritePending] = useState(null);
+  const unpackModeRef = useRef(false);
+  useEffect(() => {
+    unpackModeRef.current = unpackMode;
+  }, [unpackMode]);
   useEffect(() => {
     (async () => {
       const ok = await waitForApi();
@@ -116,7 +140,6 @@ function App() {
       const s = await api("load_settings");
       if (s) {
         setTheme(s.theme_name || "anno");
-        setFastMode(!!s.fast_mode);
         setSameAsInput(s.same_as_input !== false);
         setOutputFolder2(s.output_dir || "");
         setLod0Size(s.lod0_size || "As input");
@@ -155,11 +178,10 @@ function App() {
       theme_name: theme,
       selected_lods: lods,
       lod0_size: lod0Size,
-      fast_mode: fastMode,
       same_as_input: sameAsInput,
       output_dir: outputFolder
     });
-  }, [ready, theme, lodOn, lod0Size, fastMode, sameAsInput, outputFolder]);
+  }, [ready, theme, lodOn, lod0Size, sameAsInput, outputFolder]);
   useEffect(() => {
     let stop = false;
     const tick = async () => {
@@ -198,6 +220,17 @@ function App() {
         return;
       }
       setMode("idle");
+      if (unpackModeRef.current) {
+        const files = Array.from(e.dataTransfer.files || []);
+        if (files.some((f) => /\.(png|jpe?g|tga|bmp|tiff?|webp)$/i.test(f.name))) {
+          setUnpackMode(false);
+          unpackModeRef.current = false;
+          await api("clear_queue");
+          setQueueRows([]);
+        } else {
+          return;
+        }
+      }
       if (window.__nativeDropFiredAt && Date.now() - window.__nativeDropFiredAt < 1500) {
         return;
       }
@@ -229,7 +262,15 @@ function App() {
       await Promise.all(rootTasks);
       const okExt = /\.(png|jpe?g|tga|bmp|tiff?|webp)$/i;
       const usable = collected.filter(({ path }) => okExt.test(path));
-      if (!usable.length) return;
+      if (!usable.length) {
+        if (collected.some(({ path }) => /\.dds$/i.test(path))) {
+          setUnpackMode(true);
+          unpackModeRef.current = true;
+          await api("clear_unpack_queue");
+          setQueueRows([]);
+        }
+        return;
+      }
       const payload = await Promise.all(usable.map(async ({ path, file }) => {
         const buf = await file.arrayBuffer();
         let bin = "";
@@ -254,11 +295,37 @@ function App() {
   useEffect(() => {
     window.__onFilesDropped = async (paths) => {
       window.__nativeDropFiredAt = Date.now();
-      const rows = await api("scan_paths", paths);
-      if (rows && rows.length) {
-        setQueueRows(rows);
-        setMode("idle");
+      const isUnpack = unpackModeRef.current;
+      const isDds = (p) => /\.dds$/i.test(p);
+      const isImg = (p) => /\.(png|jpe?g|tga|bmp|tiff?|webp)$/i.test(p);
+      const filtered = isUnpack ? paths.filter(isDds) : paths.filter(isImg);
+      if (!filtered.length) {
+        const ddsFiles = paths.filter(isDds);
+        const imgFiles = paths.filter(isImg);
+        if (!isUnpack && ddsFiles.length) {
+          setUnpackMode(true);
+          unpackModeRef.current = true;
+          await api("clear_unpack_queue");
+          setQueueRows([]);
+          const rows2 = await api("scan_dds_paths", ddsFiles);
+          setMode("idle");
+          if (rows2 && rows2.length) setQueueRows(rows2);
+        } else if (isUnpack && imgFiles.length) {
+          setUnpackMode(false);
+          unpackModeRef.current = false;
+          await api("clear_queue");
+          setQueueRows([]);
+          const rows2 = await api("scan_paths", imgFiles);
+          setMode("idle");
+          if (rows2 && rows2.length) setQueueRows(rows2);
+        } else {
+          setMode("idle");
+        }
+        return;
       }
+      const rows = await api(isUnpack ? "scan_dds_paths" : "scan_paths", filtered);
+      setMode("idle");
+      if (rows && rows.length) setQueueRows(rows);
     };
     window.__nativeDragEnter = () => {
       if (mode !== "converting") setMode("drag");
@@ -290,11 +357,26 @@ function App() {
       delete window.__onBatchDone;
     };
   }, []);
+  const handleModeSwitch = async (toUnpack) => {
+    if (mode === "converting") return;
+    setUnpackMode(toUnpack);
+    await api(toUnpack ? "clear_unpack_queue" : "clear_queue");
+    setQueueRows([]);
+    setMode("idle");
+  };
   const onPickFiles = async () => {
-    const paths = await api("pick_files");
-    if (paths && paths.length) {
-      const rows = await api("scan_paths", paths);
-      if (rows) setQueueRows(rows);
+    if (unpackMode) {
+      const paths = await api("pick_dds_files");
+      if (paths && paths.length) {
+        const rows = await api("scan_dds_paths", paths);
+        if (rows) setQueueRows(rows);
+      }
+    } else {
+      const paths = await api("pick_files");
+      if (paths && paths.length) {
+        const rows = await api("scan_paths", paths);
+        if (rows) setQueueRows(rows);
+      }
     }
   };
   const onPickFolder = async () => {
@@ -307,26 +389,34 @@ function App() {
   const onScanFolder = async () => {
     const path = await api("pick_scan_folder");
     if (path) {
-      const rows = await api("scan_paths", [path]);
+      const rows = await api(unpackMode ? "scan_dds_paths" : "scan_paths", [path]);
       if (rows) setQueueRows(rows);
     }
   };
   const onAddFiles = onPickFiles;
   const onAddFolder = onScanFolder;
+  const doConvert = () => {
+    setMode("converting");
+    api(unpackMode ? "start_unpack" : "start_convert", {});
+  };
   const onConvert = async () => {
     if (!queueRows.length || mode === "converting") return;
-    setMode("converting");
-    await api("start_convert", {});
+    const result = await api("check_conflicts");
+    if (result && typeof result.count === "number" && result.count > 0) {
+      setOverwritePending(result);
+      return;
+    }
+    doConvert();
   };
   const onClearQueue = async () => {
     if (mode === "converting") return;
-    await api("clear_queue");
+    await api(unpackMode ? "clear_unpack_queue" : "clear_queue");
     setQueueRows([]);
     setMode("idle");
   };
   const onRemoveRow = async (setId) => {
     if (mode === "converting") return;
-    await api("remove_set", setId);
+    await api(unpackMode ? "remove_unpack_set" : "remove_set", setId);
     setQueueRows((prev) => prev.filter((r) => r.set_id !== setId));
   };
   const showingQueue = queueRows.length > 0 || mode === "converting";
@@ -352,17 +442,17 @@ function App() {
       theme,
       lodOn,
       setLodOn,
-      fastMode,
-      setFastMode,
       outputFolder,
       sameAsInput,
       setSameAsInput,
       lod0Size,
       setLod0Size,
       onHelp: () => setHelpOpen(true),
-      onPickFolder
+      onPickFolder,
+      unpackMode,
+      onModeSwitch: handleModeSwitch
     }
-  ), /* @__PURE__ */ React.createElement("div", { className: `hero ${dragOver ? "drag" : ""}` }, theme === "modern" && !showingQueue && !dragOver && /* @__PURE__ */ React.createElement("div", { className: "modern-dashed" }), theme === "modern" && dragOver && /* @__PURE__ */ React.createElement("div", { className: "modern-dashed drag" }), !showingQueue && (theme === "anno" ? /* @__PURE__ */ React.createElement(AnnoHeroEmpty, { dragOver, onPickFiles, onPickFolder: onScanFolder }) : /* @__PURE__ */ React.createElement(ModernHeroEmpty, { dragOver, onPickFiles, onPickFolder: onScanFolder })), showingQueue && (theme === "anno" ? /* @__PURE__ */ React.createElement(
+  ), /* @__PURE__ */ React.createElement("div", { className: `hero ${dragOver ? "drag" : ""}` }, theme === "modern" && !showingQueue && !dragOver && /* @__PURE__ */ React.createElement("div", { className: "modern-dashed" }), theme === "modern" && dragOver && /* @__PURE__ */ React.createElement("div", { className: "modern-dashed drag" }), !showingQueue && (theme === "anno" ? /* @__PURE__ */ React.createElement(AnnoHeroEmpty, { dragOver, onPickFiles, onPickFolder: onScanFolder, unpackMode }) : /* @__PURE__ */ React.createElement(ModernHeroEmpty, { dragOver, onPickFiles, onPickFolder: onScanFolder, unpackMode })), showingQueue && (theme === "anno" ? /* @__PURE__ */ React.createElement(
     AnnoQueue,
     {
       rows: queueRows,
@@ -371,7 +461,8 @@ function App() {
       onAddFiles,
       onAddFolder,
       onShowLog: (row) => setErrorModal({ name: row.name, text: row.error_text || "" }),
-      onRemove: onRemoveRow
+      onRemove: onRemoveRow,
+      unpackMode
     }
   ) : /* @__PURE__ */ React.createElement(
     ModernQueue,
@@ -382,7 +473,8 @@ function App() {
       onAddFiles,
       onAddFolder,
       onShowLog: (row) => setErrorModal({ name: row.name, text: row.error_text || "" }),
-      onRemove: onRemoveRow
+      onRemove: onRemoveRow,
+      unpackMode
     }
   ))), /* @__PURE__ */ React.createElement(
     ConvertButton,
@@ -390,7 +482,8 @@ function App() {
       theme,
       mode,
       enabled: queueRows.length > 0,
-      onClick: onConvert
+      onClick: onConvert,
+      unpackMode
     }
   ), /* @__PURE__ */ React.createElement(
     Footer,
@@ -401,7 +494,18 @@ function App() {
       parallel,
       onToggleTheme: () => setTheme((t) => t === "anno" ? "modern" : "anno")
     }
-  ), helpOpen && /* @__PURE__ */ React.createElement(HelpDialog, { onClose: () => setHelpOpen(false) }), errorModal && /* @__PURE__ */ React.createElement(
+  ), helpOpen && /* @__PURE__ */ React.createElement(HelpDialog, { onClose: () => setHelpOpen(false), unpackMode }), overwritePending && /* @__PURE__ */ React.createElement(
+    OverwriteDialog,
+    {
+      count: overwritePending.count,
+      examples: overwritePending.examples,
+      onCancel: () => setOverwritePending(null),
+      onOverwrite: () => {
+        setOverwritePending(null);
+        doConvert();
+      }
+    }
+  ), errorModal && /* @__PURE__ */ React.createElement(
     ErrorLogDialog,
     {
       name: errorModal.name,
@@ -409,6 +513,9 @@ function App() {
       onClose: () => setErrorModal(null)
     }
   ))));
+}
+function OverwriteDialog({ count, examples, onOverwrite, onCancel }) {
+  return /* @__PURE__ */ React.createElement("div", { className: "scrim", onClick: onCancel }, /* @__PURE__ */ React.createElement("div", { className: "help-dialog", style: { width: 460, maxHeight: "none" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("div", { className: "help-title-row" }, /* @__PURE__ */ React.createElement("div", { className: "help-title" }, "Overwrite Existing Files?"), /* @__PURE__ */ React.createElement("button", { className: "help-close", onClick: onCancel }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "help-body", style: { padding: "20px 24px 8px" } }, /* @__PURE__ */ React.createElement("p", { style: { margin: "0 0 12px", lineHeight: 1.6 } }, /* @__PURE__ */ React.createElement("strong", null, count), " output file", count !== 1 ? "s" : "", " already exist in the output folder. Do you want to overwrite ", count !== 1 ? "them" : "it", "?"), examples && examples.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 3, marginTop: 4 } }, examples.map((f) => /* @__PURE__ */ React.createElement("span", { key: f, className: "code", style: { fontSize: 11, opacity: 0.7 } }, f)), count > examples.length && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, opacity: 0.5 } }, "\u2026and ", count - examples.length, " more"))), /* @__PURE__ */ React.createElement("div", { className: "help-actions", style: { gap: 10 } }, /* @__PURE__ */ React.createElement("button", { className: "btn-ghost", onClick: onCancel, style: { flex: 1 } }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: "btn-got-it", onClick: onOverwrite, style: { flex: 1 } }, "Overwrite"))));
 }
 function ErrorLogDialog({ name, text, onClose }) {
   return /* @__PURE__ */ React.createElement("div", { className: "scrim", onClick: onClose }, /* @__PURE__ */ React.createElement("div", { className: "help-dialog", style: { width: 720, maxHeight: "70%" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("div", { className: "help-title-row" }, /* @__PURE__ */ React.createElement("div", { className: "help-title" }, "Error log \u2014 ", name), /* @__PURE__ */ React.createElement("button", { className: "help-close", onClick: onClose }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "help-body", style: { whiteSpace: "pre-wrap", fontFamily: "JetBrains Mono, Consolas, monospace", fontSize: 13, color: "#F26B6B" } }, text || "(no details captured)"), /* @__PURE__ */ React.createElement("div", { className: "help-actions" }, /* @__PURE__ */ React.createElement("button", { className: "btn-got-it", onClick: onClose }, "Close"))));

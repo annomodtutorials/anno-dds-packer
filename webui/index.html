@@ -100,23 +100,45 @@
       position: fixed; top: 0; left: 0; right: 0; height: 38px; z-index: 13000;
     }
     #wm-controls {
-      position: absolute; top: 6px; right: 8px; display: flex; gap: 3px;
+      position: absolute; top: 5px; right: 8px; display: flex; gap: 4px;
     }
     #wm-controls button {
-      width: 26px; height: 26px; border: none; border-radius: 5px;
-      background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.55);
-      font-size: 12px; cursor: pointer; display: flex; align-items: center;
-      justify-content: center; transition: background 0.12s, color 0.12s;
+      width: 28px; height: 28px; border-radius: 5px;
+      border: 1px solid rgba(201,161,82,0.14);
+      background: rgba(201,161,82,0.05);
+      color: rgba(201,161,82,0.40);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
       outline: none; font-family: system-ui, sans-serif; pointer-events: all;
+      line-height: 1;
     }
-    #wm-controls button:hover { background: rgba(255,255,255,0.14); color: rgba(255,255,255,0.85); }
-    #wm-close:hover  { background: #c0392b !important; color: #fff !important; }
-    #wm-min:hover, #wm-max:hover {
-      background: rgba(201,161,82,0.18) !important; color: #C9A152 !important;
+    #wm-controls button:hover {
+      background: rgba(201,161,82,0.14);
+      border-color: rgba(201,161,82,0.32);
+      color: #C9A152;
     }
-    html[data-theme="modern"] #wm-min:hover,
-    html[data-theme="modern"] #wm-max:hover {
-      background: rgba(152,147,252,0.18) !important; color: #9893FC !important;
+    #wm-min  { font-size: 18px; }
+    #wm-max  { font-size: 11px; letter-spacing: 0; }
+    #wm-close { font-size: 12px; }
+    #wm-close:hover {
+      background: rgba(192,57,43,0.80) !important;
+      border-color: rgba(192,57,43,0.60) !important;
+      color: #fff !important;
+    }
+    html[data-theme="modern"] #wm-controls button {
+      border-color: rgba(152,147,252,0.18);
+      background: rgba(152,147,252,0.05);
+      color: rgba(152,147,252,0.40);
+    }
+    html[data-theme="modern"] #wm-controls button:hover {
+      background: rgba(152,147,252,0.15);
+      border-color: rgba(152,147,252,0.35);
+      color: #9893FC;
+    }
+    html[data-theme="modern"] #wm-close:hover {
+      background: rgba(192,57,43,0.80) !important;
+      border-color: rgba(192,57,43,0.60) !important;
+      color: #fff !important;
     }
   </style>
 </head>
@@ -136,8 +158,8 @@
   <div id="titlebar" data-tauri-drag-region>
     <div id="wm-controls">
       <button id="wm-min"   title="Minimise"           onclick="__wmMin()">&#8722;</button>
-      <button id="wm-max"   title="Maximise / Restore" onclick="__wmMax()">&#9633;</button>
-      <button id="wm-close" title="Close"              onclick="__wmClose()">&#10005;</button>
+      <button id="wm-max"   title="Maximise / Restore" onclick="__wmMax()">&#9634;</button>
+      <button id="wm-close" title="Close"              onclick="__wmClose()">&#215;</button>
     </div>
   </div>
 
@@ -179,13 +201,13 @@
     function __wmClose() { window.__TAURI__.core.invoke('close_window'); }
     function __wmMax() {
       window.__TAURI__.core.invoke('toggle_maximize').then(function(isNowMax) {
-        document.getElementById('wm-max').innerHTML = isNowMax ? '&#9634;' : '&#9633;';
+        document.getElementById('wm-max').innerHTML = isNowMax ? '&#9633;' : '&#9634;';
       });
     }
     window.__TAURI__.event.listen('tauri://resize', function() {
       window.__TAURI__.core.invoke('is_maximized').then(function(max) {
         var btn = document.getElementById('wm-max');
-        if (btn) btn.innerHTML = max ? '&#9634;' : '&#9633;';
+        if (btn) btn.innerHTML = max ? '&#9633;' : '&#9634;';
       });
     });
   </script>
@@ -194,6 +216,7 @@
     // ── Tauri + Python bridge ──────────────────────────────────────
     var TAURI_METHODS = {
       pick_files:       function() { return window.__TAURI__.core.invoke('pick_files'); },
+      pick_dds_files:   function() { return window.__TAURI__.core.invoke('pick_dds_files'); },
       pick_folder:      function() { return window.__TAURI__.core.invoke('pick_folder'); },
       pick_scan_folder: function() { return window.__TAURI__.core.invoke('pick_scan_folder'); },
       open_folder:      function(path) { return window.__TAURI__.core.invoke('open_folder', { path: path }); },
@@ -219,7 +242,7 @@
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(arg !== undefined ? arg : null),
-                }).then(function(r) { return r.json(); });
+                }).then(function(r) { return r.ok ? r.json() : null; });
               };
             }
           })

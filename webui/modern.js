@@ -1,4 +1,4 @@
-function ModernHeroEmpty({ dragOver, onPickFiles, onPickFolder }) {
+function ModernHeroEmpty({ dragOver, onPickFiles, onPickFolder, unpackMode }) {
   return /* @__PURE__ */ React.createElement("div", { className: "hero-stack" }, /* @__PURE__ */ React.createElement("div", { className: `modern-drop-icon ${dragOver ? "drag" : ""}`, style: { marginTop: 32 } }, /* @__PURE__ */ React.createElement("div", { className: "paper back" }), /* @__PURE__ */ React.createElement("div", { className: "paper front" }, /* @__PURE__ */ React.createElement(ImagePlaceholderIcon, null)), /* @__PURE__ */ React.createElement("div", { className: "arrow" }, /* @__PURE__ */ React.createElement(
     "svg",
     {
@@ -13,13 +13,15 @@ function ModernHeroEmpty({ dragOver, onPickFiles, onPickFolder }) {
     },
     /* @__PURE__ */ React.createElement("line", { x1: "18", y1: "6", x2: "18", y2: "28" }),
     /* @__PURE__ */ React.createElement("polyline", { points: "10 22 18 30 26 22" })
-  ))), /* @__PURE__ */ React.createElement("div", { className: "hero-headline", style: { marginTop: 40 } }, dragOver ? "Release to import images" : "Drop image files or folders"), /* @__PURE__ */ React.createElement("div", { className: "hero-body", style: dragOver ? { whiteSpace: "nowrap", maxWidth: "none" } : {} }, dragOver ? "Drop your images to begin packing" : "We'll auto-detect Diffuse, Normal, and Packed Metal+Roughness maps and convert them to game-ready DDS textures. PNG, JPG, TGA, BMP and TIFF all supported."), !dragOver && /* @__PURE__ */ React.createElement("div", { className: "hero-buttons" }, /* @__PURE__ */ React.createElement("button", { className: "btn-ghost", onClick: onPickFiles }, /* @__PURE__ */ React.createElement(FileIcon, { color: "#9893FC" }), "Pick Files"), /* @__PURE__ */ React.createElement("button", { className: "btn-ghost", onClick: onPickFolder }, /* @__PURE__ */ React.createElement(FolderIcon, { color: "#9893FC" }), "Pick Folder")));
+  ))), /* @__PURE__ */ React.createElement("div", { className: "hero-headline", style: { marginTop: 40 } }, dragOver ? unpackMode ? "Release to import DDS files" : "Release to import images" : unpackMode ? "Drop DDS files or folders" : "Drop image files or folders"), /* @__PURE__ */ React.createElement("div", { className: "hero-body", style: dragOver ? { whiteSpace: "nowrap", maxWidth: "none" } : {} }, dragOver ? unpackMode ? "Drop DDS files to begin unpacking" : "Drop your images to begin packing" : unpackMode ? "Drop Anno DDS texture files to unpack them back into individual PNG maps \u2014 Diffuse, Normal, Metalness, AO, Gloss and more." : "We'll auto-detect Diffuse, Normal, and Packed Metal+Roughness maps and convert them to game-ready DDS textures. PNG, JPG, TGA, BMP and TIFF all supported."), !dragOver && /* @__PURE__ */ React.createElement("div", { className: "hero-buttons" }, /* @__PURE__ */ React.createElement("button", { className: "btn-ghost", onClick: onPickFiles }, /* @__PURE__ */ React.createElement(FileIcon, { color: "#9893FC" }), unpackMode ? "Pick DDS Files" : "Pick Files"), /* @__PURE__ */ React.createElement("button", { className: "btn-ghost", onClick: onPickFolder }, /* @__PURE__ */ React.createElement(FolderIcon, { color: "#9893FC" }), "Pick Folder")));
 }
-function ModernQueueRow({ row, onShowLog, onRemove }) {
-  const labelText = row.status === "done" ? "COMPLETED" : row.status === "queued" ? "WAITING IN QUEUE" : row.label || row.status.toUpperCase();
-  const inputs = maybeInputChips(row.input_map_types);
-  const outputs = row.output_map_types || ["diff", "norm", "metal"];
+function ModernQueueRow({ row, onShowLog, onRemove, unpackMode }) {
+  const labelText = row.status === "done" ? unpackMode ? "UNPACKED" : "COMPLETED" : row.status === "queued" ? "WAITING IN QUEUE" : row.label || row.status.toUpperCase();
   const done = new Set(row.maps_done || []);
+  const packInputs = maybeInputChips(row.input_map_types);
+  const packOutputs = row.output_map_types || ["diff", "norm", "metal"];
+  const unpackInputs = row.input_dds_types || [];
+  const unpackOutputs = row.output_png_types || [];
   const iconsFor = (chip) => {
     const t = chip.type;
     if (t === "diff") return [/* @__PURE__ */ React.createElement(ModernSunIcon, { size: 26, color: "#F2B65A" })];
@@ -32,17 +34,12 @@ function ModernQueueRow({ row, onShowLog, onRemove }) {
     if (t === "height") return [/* @__PURE__ */ React.createElement(ModernCubeIcon, { size: 26, color: "#5DD49A" })];
     if (t === "rm") return [
       /* @__PURE__ */ React.createElement(ModernCubeIcon, { size: 26, color: "#9CA3B0" }),
-      // metal
       /* @__PURE__ */ React.createElement(ModernCubeIcon, { size: 26, color: "#F2B65A" })
-      // roughness
     ];
     if (t === "orm") return [
       /* @__PURE__ */ React.createElement(ModernSunIcon, { size: 26, color: "#6B7280" }),
-      // AO
       /* @__PURE__ */ React.createElement(ModernCubeIcon, { size: 26, color: "#F2B65A" }),
-      // roughness
       /* @__PURE__ */ React.createElement(ModernCubeIcon, { size: 26, color: "#9CA3B0" })
-      // metal
     ];
     return [/* @__PURE__ */ React.createElement(ModernCubeIcon, { size: 26 })];
   };
@@ -82,10 +79,10 @@ function ModernQueueRow({ row, onShowLog, onRemove }) {
       }
     },
     "\u2715"
-  ), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "row-name" }, row.name), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, display: "flex", alignItems: "center", flexWrap: "wrap" } }, inputs.map((c, i) => {
+  ), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "row-name" }, row.name), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, display: "flex", alignItems: "center", flexWrap: "wrap" } }, unpackMode ? unpackInputs.map((mt) => /* @__PURE__ */ React.createElement("div", { key: mt, className: "dds-chip", style: { marginRight: 8, marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", { className: "dds-badge" }, "DDS"), DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`)) : packInputs.map((c, i) => {
     const nodes = iconsFor(c);
     return /* @__PURE__ */ React.createElement("span", { key: `${c.type}-${i}`, className: "row-input-chip" }, nodes.map((n, j) => /* @__PURE__ */ React.createElement(React.Fragment, { key: j }, j > 0 && /* @__PURE__ */ React.createElement("span", { className: "chip-plus" }, "+"), n)), /* @__PURE__ */ React.createElement("span", { className: "label" }, c.label));
-  }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "row-output-label" }, "Output DDS"), outputs.map((mt) => /* @__PURE__ */ React.createElement("div", { key: mt, className: "dds-chip" }, /* @__PURE__ */ React.createElement("span", { className: "dds-badge" }, "DDS"), DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`, (row.status === "done" || done.has(mt)) && /* @__PURE__ */ React.createElement("span", { className: "check", style: { color: "#5DD49A" } }, "\u2713")))), /* @__PURE__ */ React.createElement("div", { className: "row-status", "data-status": row.status }, /* @__PURE__ */ React.createElement(Donut, { pct: row.pct, status: row.status, theme: "modern" }), /* @__PURE__ */ React.createElement("div", { className: "row-status-text" }, /* @__PURE__ */ React.createElement("div", { className: "label" }, labelText), row.status === "done" && /* @__PURE__ */ React.createElement("div", { className: "eta" }, "100%"), row.status === "queued" && /* @__PURE__ */ React.createElement("div", { className: "eta" }, row.eta_text || `Position ${row.queue_position || ""}`), (row.status === "encoding" || row.status === "packing" || row.status === "writing" || row.status === "reading") && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "eta" }, row.eta_text || `${Math.round(row.pct)}%`), /* @__PURE__ */ React.createElement("div", { className: "row-progress-bar", style: { width: 240 } }, /* @__PURE__ */ React.createElement("div", { className: "fill", style: { width: `${row.pct}%` } }))), row.status === "error" && /* @__PURE__ */ React.createElement(
+  }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "row-output-label" }, unpackMode ? "Output PNG" : "Output DDS"), unpackMode ? unpackOutputs.map((pt) => /* @__PURE__ */ React.createElement("div", { key: pt, className: "dds-chip" }, /* @__PURE__ */ React.createElement("span", { className: "png-badge" }, "PNG"), PNG_OUTPUT_LABEL[pt] || `${pt.toUpperCase()}.PNG`, (row.status === "done" || done.has(pt)) && /* @__PURE__ */ React.createElement("span", { className: "check", style: { color: "#5DD49A" } }, "\u2713"))) : packOutputs.map((mt) => /* @__PURE__ */ React.createElement("div", { key: mt, className: "dds-chip" }, /* @__PURE__ */ React.createElement("span", { className: "dds-badge" }, "DDS"), DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`, (row.status === "done" || done.has(mt)) && /* @__PURE__ */ React.createElement("span", { className: "check", style: { color: "#5DD49A" } }, "\u2713")))), /* @__PURE__ */ React.createElement("div", { className: "row-status", "data-status": row.status }, /* @__PURE__ */ React.createElement(Donut, { pct: row.pct, status: row.status, theme: "modern" }), /* @__PURE__ */ React.createElement("div", { className: "row-status-text" }, /* @__PURE__ */ React.createElement("div", { className: "label" }, labelText), row.status === "done" && /* @__PURE__ */ React.createElement("div", { className: "eta" }, "100%"), row.status === "queued" && /* @__PURE__ */ React.createElement("div", { className: "eta" }, row.eta_text || `Position ${row.queue_position || ""}`), (row.status === "encoding" || row.status === "packing" || row.status === "writing" || row.status === "reading") && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "eta" }, row.eta_text || `${Math.round(row.pct)}%`), /* @__PURE__ */ React.createElement("div", { className: "row-progress-bar", style: { width: 240 } }, /* @__PURE__ */ React.createElement("div", { className: "fill", style: { width: `${row.pct}%` } }))), row.status === "error" && /* @__PURE__ */ React.createElement(
     "div",
     {
       className: "eta",
@@ -95,9 +92,10 @@ function ModernQueueRow({ row, onShowLog, onRemove }) {
     "See log \u2197"
   ))));
 }
-function ModernQueue({ rows, onClear, canClear, onAddFiles, onAddFolder, onShowLog, onRemove }) {
+function ModernQueue({ rows, onClear, canClear, onAddFiles, onAddFolder, onShowLog, onRemove, unpackMode }) {
   const inProgress = rows.filter((r) => r.status !== "queued").length;
-  return /* @__PURE__ */ React.createElement("div", { className: "queue" }, /* @__PURE__ */ React.createElement("div", { className: "queue-header", style: { position: "relative" } }, canClear && /* @__PURE__ */ React.createElement("div", { className: "queue-actions left" }, /* @__PURE__ */ React.createElement("button", { className: "queue-action-btn", onClick: onAddFiles, title: "Add files" }, /* @__PURE__ */ React.createElement(FileIcon, { color: "#9893FC" }), " Add Files"), /* @__PURE__ */ React.createElement("button", { className: "queue-action-btn", onClick: onAddFolder, title: "Add folder" }, /* @__PURE__ */ React.createElement(FolderIcon, { color: "#9893FC" }), " Add Folder")), "Conversion Queue ", /* @__PURE__ */ React.createElement("span", { className: "count" }, inProgress, " of ", rows.length), canClear && /* @__PURE__ */ React.createElement("button", { className: "queue-clear-btn", onClick: onClear, title: "Clear queue" }, "Clear \u2715")), /* @__PURE__ */ React.createElement("div", { className: "queue-list" }, rows.map((r) => /* @__PURE__ */ React.createElement(ModernQueueRow, { key: r.set_id, row: r, onShowLog, onRemove }))));
+  const queueTitle = unpackMode ? "Unpack Queue" : "Conversion Queue";
+  return /* @__PURE__ */ React.createElement("div", { className: "queue" }, /* @__PURE__ */ React.createElement("div", { className: "queue-header", style: { position: "relative" } }, canClear && /* @__PURE__ */ React.createElement("div", { className: "queue-actions left" }, /* @__PURE__ */ React.createElement("button", { className: "queue-action-btn", onClick: onAddFiles, title: "Add files" }, /* @__PURE__ */ React.createElement(FileIcon, { color: "#9893FC" }), " ", unpackMode ? "Add DDS" : "Add Files"), /* @__PURE__ */ React.createElement("button", { className: "queue-action-btn", onClick: onAddFolder, title: "Add folder" }, /* @__PURE__ */ React.createElement(FolderIcon, { color: "#9893FC" }), " Add Folder")), queueTitle, " ", /* @__PURE__ */ React.createElement("span", { className: "count" }, inProgress, " of ", rows.length), canClear && /* @__PURE__ */ React.createElement("button", { className: "queue-clear-btn", onClick: onClear, title: "Clear queue" }, "Clear \u2715")), /* @__PURE__ */ React.createElement("div", { className: "queue-list" }, rows.map((r) => /* @__PURE__ */ React.createElement(ModernQueueRow, { key: r.set_id, row: r, onShowLog, onRemove, unpackMode }))));
 }
 window.ModernHeroEmpty = ModernHeroEmpty;
 window.ModernQueue = ModernQueue;

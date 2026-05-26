@@ -88,6 +88,29 @@ pub async fn close_window(window: tauri::WebviewWindow) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn pick_dds_files(app: tauri::AppHandle) -> Result<Vec<String>, String> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .add_filter("DDS files", &["dds"])
+        .pick_files(move |result| {
+            let _ = tx.send(result);
+        });
+    let files = rx.await.map_err(|e| e.to_string())?;
+    Ok(files
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|f| {
+            if let FilePath::Path(p) = f {
+                Some(p.to_string_lossy().to_string())
+            } else {
+                None
+            }
+        })
+        .collect())
+}
+
+#[tauri::command]
 pub async fn open_folder(path: String) -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {

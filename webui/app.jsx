@@ -6,19 +6,37 @@
 
 const LOD0_SIZE_OPTIONS = ['As input', '4096', '2048', '1024', '512', '256'];
 
-function HelpDialog({ onClose }) {
+function HelpDialog({ onClose, unpackMode }) {
   return (
     <div className="scrim" onClick={onClose}>
       <div className="help-dialog" onClick={e => e.stopPropagation()}>
         <div className="help-title-row">
-          <div className="help-title">Help &amp; Channel Reference</div>
+          <div className="help-title">{unpackMode ? 'Help — Unpack Mode' : 'Help & Channel Reference'}</div>
           <button className="help-close" onClick={onClose}>✕</button>
         </div>
         <div className="help-body">
           <section className="help-section">
             <div className="help-section-title"><span className="strip" /><h3>What this tool does</h3></div>
-            <p>Anno 117 DDS Packer turns standard PBR PNG exports — the kind you get out of Blender, Substance, or any AI 3D generator — into the BC7-encoded DDS textures the Anno 117 modding pipeline expects. It auto-detects which PNG is which (diffuse, normal, metalness, etc.), repacks channels into Anno's convention, generates the LOD chain, and writes the <span className="code">.dds</span> files you can drop straight into your mod folder.</p>
+            {unpackMode ? (
+              <p>Anno DDS Unpacker reads Anno-format DDS texture files and splits each one back into individual, properly-decoded PNG maps — Diffuse, Opacity, Normal, Roughness, Metal, AO, Height, and Emission. Normal maps are automatically converted from Anno's DirectX convention (Y-down) to the OpenGL convention (Y-up) that Blender and Maya use. Drop in <span className="code">_diff</span>, <span className="code">_norm</span>, <span className="code">_metal</span>, <span className="code">_height</span>, and <span className="code">_mask</span> DDS files and get clean, channel-correct PNGs ready for your 3D workflow.</p>
+            ) : (
+              <p>Anno DDS Packer converts standard PBR texture exports — from Blender, Substance, or any AI 3D generator — into the BC7-encoded DDS textures the Anno modding pipeline expects. It auto-detects which file is which, repacks channels into Anno's convention, generates the LOD chain, and writes the <span className="code">.dds</span> files you can drop straight into your mod folder. The <strong>Unpack</strong> mode does the reverse: it reads Anno DDS files and splits them back into individual PNG maps.</p>
+            )}
           </section>
+
+          {unpackMode && (
+            <section className="help-section">
+              <div className="help-section-title"><span className="strip" /><h3>Why not just use the RDA extractor?</h3></div>
+              <p>The RDA extractor (the popular GitHub tool for pulling assets out of Anno game files) exports DDS textures as PNG — but it does a raw decode with no channel awareness. That means:</p>
+              <ul style={{ paddingLeft: 18, marginTop: 6, lineHeight: 1.7 }}>
+                <li>The <strong>Diffuse DDS</strong> contains Opacity in its alpha channel. The RDA extractor bakes this alpha straight into the PNG — you get a transparent PNG, not an Albedo texture. Trying to use it in Blender gives you a partially transparent material.</li>
+                <li>The <strong>Normal DDS</strong> alpha contains Glossiness data. When baked into the PNG it corrupts the appearance of the normal in any standard viewer.</li>
+                <li>The <strong>Metal DDS</strong> alpha contains AO. Same problem — the AO gets baked into what looks like a Metalness map.</li>
+                <li>Anno uses the <strong>DirectX normal convention</strong> (green channel Y-down). The RDA extractor outputs these as-is, so normals appear inverted in Blender and Maya (which expect OpenGL, Y-up). You'd have to flip the green channel manually.</li>
+              </ul>
+              <p style={{ marginTop: 8 }}>This tool handles all of that for you: it splits every DDS into its correct individual maps, discards trivially-uniform alpha channels (so you don't get a pointless fully-opaque file), and converts normals to OpenGL so they work immediately in your 3D app.</p>
+            </section>
+          )}
 
           <section className="help-section">
             <div className="help-section-title"><span className="strip" /><h3>What is a DDS?</h3></div>
@@ -34,6 +52,7 @@ function HelpDialog({ onClose }) {
                 <tr><td>Metal</td><td>Metalness (grayscale, linear)</td><td>Ambient Occlusion</td></tr>
                 <tr><td>Normal</td><td>DirectX tangent normal (linear)</td><td>Glossiness (= 1 − roughness)</td></tr>
                 <tr><td>Height</td><td>Grayscale displacement (linear)</td><td>—</td></tr>
+                <tr><td>Mask</td><td>Emission / night-glow mask (linear)</td><td>Secondary night mask</td></tr>
               </tbody>
             </table>
           </section>
@@ -52,6 +71,7 @@ function HelpDialog({ onClose }) {
                 <tr><td>Height / Displacement</td><td><span className="code">_height</span> <span className="code">_disp</span> <span className="code">_displacement</span></td></tr>
                 <tr><td>Packed Rough+Metal</td><td><span className="code">_rm</span></td></tr>
                 <tr><td>Packed Occ+Rough+Metal</td><td><span className="code">_orm</span></td></tr>
+                <tr><td>Emission / night mask</td><td><span className="code">_emission</span> <span className="code">_emissive</span> <span className="code">_nightmask</span></td></tr>
               </tbody>
             </table>
             <p style={{ marginTop: 10, fontSize: 13, opacity: 0.85 }}>Matching is case-insensitive and tolerant of <span className="code">.</span>, <span className="code">_</span>, <span className="code">-</span> separators. Base name = filename minus suffix minus extension; files that share a base name are bundled into a "set".</p>
@@ -75,7 +95,7 @@ function HelpDialog({ onClose }) {
 
           <section className="help-section">
             <div className="help-section-title"><span className="strip" /><h3>Fast mode</h3></div>
-            <p>BC7 encoding sweeps many block modes to find the best per-tile. Fast mode prunes the search to modes that statistically win ≥ 95% of the time. Output is visually identical in 99.x% of cases on Anno-style material textures. Speedup ≈ <strong>1.5×</strong>. Use during iteration; turn off for release builds.</p>
+            <p>BC7 encoding sweeps many block modes to find the best per-tile. Fast mode prunes the search to modes that statistically win ≥ 95% of the time. Output is visually identical in 99.x% of cases on Anno-style material textures. Speedup ≈ <strong>1.5×</strong>. Fast mode is always enabled — for Anno textures there is no perceptible quality difference.</p>
           </section>
 
           <section className="help-section">
@@ -100,18 +120,24 @@ function FolderPickerMenu({ onSameAsInput, onPickFolder, sameAsInput, onClose })
       <button className="picker-row" onClick={() => { onSameAsInput(!sameAsInput); onClose(); }}>
         <span className="picker-check">{sameAsInput ? '✓' : ' '}</span> Same as input folder
       </button>
-      <div className="picker-hint">
-        Tip: "Same as input" only resolves real folder paths for files added
-        via <strong>Pick Folder</strong> / <strong>Pick Files</strong>.
-        Drag-dropped files have no disk path and will land in the Output Folder above.
-      </div>
     </div>
   );
 }
 
-function Header({ theme, lodOn, setLodOn, fastMode, setFastMode, outputFolder, sameAsInput, setSameAsInput, lod0Size, setLod0Size, onHelp, onPickFolder }) {
+function Header({ theme, lodOn, setLodOn, outputFolder, sameAsInput, setSameAsInput, lod0Size, setLod0Size, onHelp, onPickFolder, unpackMode, onModeSwitch }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [lod0Open, setLod0Open] = useState(false);
+
+  // Close any open dropdown when the user clicks anywhere outside it.
+  // setTimeout(0) defers adding the listener until after the current click
+  // event finishes, so the opening click doesn't immediately re-close it.
+  useEffect(() => {
+    if (!pickerOpen && !lod0Open) return;
+    const close = () => { setPickerOpen(false); setLod0Open(false); };
+    const tid = setTimeout(() => document.addEventListener('click', close), 0);
+    return () => { clearTimeout(tid); document.removeEventListener('click', close); };
+  }, [pickerOpen, lod0Open]);
+
   return (
     <>
       <div className="header">
@@ -122,9 +148,9 @@ function Header({ theme, lodOn, setLodOn, fastMode, setFastMode, outputFolder, s
           <div className="brand-text">
             <div className="brand-title">Anno DDS Packer</div>
             <div className="brand-subtitle">
-              {theme === 'anno'
-                ? 'Convert PNG Maps to Game-Ready DDS Textures'
-                : 'Convert PNG maps to game-ready DDS textures'}
+              {unpackMode
+                ? (theme === 'anno' ? 'Unpack DDS Textures to PNG Maps' : 'Unpack DDS textures to PNG maps')
+                : (theme === 'anno' ? 'Convert PNG Maps to Game-Ready DDS Textures' : 'Convert PNG maps to game-ready DDS textures')}
             </div>
           </div>
         </div>
@@ -178,11 +204,13 @@ function Header({ theme, lodOn, setLodOn, fastMode, setFastMode, outputFolder, s
       </div>
 
       <div className="header-right">
-        <div className="fast-mode-block">
-          <div className="setting-label">Fast Mode</div>
-          <div className="toggle" data-on={fastMode}
-               onClick={() => setFastMode(v => !v)}>
-            <div className="thumb" />
+        <div className="mode-toggle-block">
+          <div className="setting-label">Mode</div>
+          <div className="mode-toggle">
+            <button className={`mode-btn${!unpackMode ? ' active' : ''}`}
+                    onClick={() => onModeSwitch(false)}>Pack</button>
+            <button className={`mode-btn${unpackMode ? ' active' : ''}`}
+                    onClick={() => onModeSwitch(true)}>Unpack</button>
           </div>
         </div>
         <button className="icon-btn" onClick={onHelp}>?</button>
@@ -228,9 +256,12 @@ function Footer({ theme, mode, vram, parallel, onToggleTheme }) {
   );
 }
 
-function ConvertButton({ theme, mode, enabled, onClick }) {
+function ConvertButton({ theme, mode, enabled, onClick, unpackMode }) {
   const running = mode === 'converting';
   const cls = `convert-bar ${running ? 'running' : (enabled ? 'ready' : '')}`;
+  const caption = running
+    ? (unpackMode ? 'Unpacking…' : 'Converting…')
+    : (unpackMode ? 'Unpack to PNG' : 'Convert to DDS');
   return (
     <>
       <div className="diamond-divider above">
@@ -250,9 +281,7 @@ function ConvertButton({ theme, mode, enabled, onClick }) {
           </>
         )}
         {running && <ConvertSpinner />}
-        <span className="convert-caption">
-          {running ? 'Converting…' : 'Convert to DDS'}
-        </span>
+        <span className="convert-caption">{caption}</span>
       </div>
       <div className="diamond-divider below">
         <div className="line left" />
@@ -295,7 +324,6 @@ function App() {
   const [theme, setTheme] = useState('anno');
   const [mode, setMode] = useState('idle');             // idle | drag | converting
   const [lodOn, setLodOn] = useState({ 0:true, 1:false, 2:false, 3:false, 4:false });
-  const [fastMode, setFastMode] = useState(false);
   const [sameAsInput, setSameAsInput] = useState(true);
   const [outputFolder, setOutputFolder] = useState('');
   const [lod0Size, setLod0Size] = useState('As input');
@@ -304,28 +332,24 @@ function App() {
   const [vram, setVram] = useState({ used: 0, total: 0 });
   const [parallel, setParallel] = useState({ active: 0, cap: 8 });
   const [errorModal, setErrorModal] = useState(null);   // {name, text} or null
+  const [unpackMode, setUnpackMode] = useState(false);
+  const [overwritePending, setOverwritePending] = useState(null); // {count, examples} | null
 
-  // (The HTML #splash was removed; a React in-app loading state covers
-  //  the boot gap until the bridge connects or waitForApi times out.)
+  // Ref so async callbacks (closures) always see the current unpackMode
+  const unpackModeRef = useRef(false);
+  useEffect(() => { unpackModeRef.current = unpackMode; }, [unpackMode]);
 
   // — Load settings from Python on mount —
   useEffect(() => {
     (async () => {
       const ok = await waitForApi();
       if (!ok) {
-        // Bridge didn't come up in time — make the UI usable anyway.
-        // Note: do NOT call notify_ready here — the dedicated notify_ready
-        // useEffect below handles that via __bridgeReady.then(), which fires
-        // as soon as the QWebChannel bind() callback runs (independently of
-        // this waitForApi timeout). Calling it here while window.bridge may
-        // still be undefined would be a no-op and cause the splash to hang.
         setReady(true);
         return;
       }
       const s = await api('load_settings');
       if (s) {
         setTheme(s.theme_name || 'anno');
-        setFastMode(!!s.fast_mode);
         setSameAsInput(s.same_as_input !== false);
         setOutputFolder(s.output_dir || '');
         setLod0Size(s.lod0_size || 'As input');
@@ -341,16 +365,6 @@ function App() {
   }, []);
 
   // — Signal Qt to hide the native splash once React has painted —
-  //
-  // This runs independently of waitForApi / load_settings. We wait on
-  // window.__bridgeReady (a Promise that resolves inside QWebChannel's
-  // bind() callback, so it's guaranteed to fire AFTER window.bridge is set)
-  // then use a DOUBLE requestAnimationFrame so the browser has completed at
-  // least one full paint+composite cycle before the splash fades. Without
-  // this the fade starts on an empty navy background causing a pop-in.
-  //
-  // On cold-start, __bridgeReady may resolve seconds after waitForApi times
-  // out — but it will still resolve, and notify_ready will still fire.
   useEffect(() => {
     (window.__bridgeReady || Promise.resolve(null)).then(function(bridge) {
       requestAnimationFrame(function() {
@@ -366,8 +380,7 @@ function App() {
     });
   }, []);
 
-  // — Splash belt-and-suspenders: if the bridge never resolved __bridgeReady
-  //   (packer timeout path), hide the splash when React marks itself ready.
+  // — Splash belt-and-suspenders —
   useEffect(() => {
     if (!ready) return;
     if (window.__hideSplash) window.__hideSplash();
@@ -381,11 +394,10 @@ function App() {
       theme_name: theme,
       selected_lods: lods,
       lod0_size: lod0Size,
-      fast_mode: fastMode,
       same_as_input: sameAsInput,
       output_dir: outputFolder,
     });
-  }, [ready, theme, lodOn, lod0Size, fastMode, sameAsInput, outputFolder]);
+  }, [ready, theme, lodOn, lod0Size, sameAsInput, outputFolder]);
 
   // — VRAM + parallel-sets polling —
   useEffect(() => {
@@ -402,12 +414,8 @@ function App() {
     return () => { stop = true; };
   }, []);
 
-  // — Drag-and-drop (HTML5; bytes streamed to Python via bridge) —
+  // — Drag-and-drop (HTML5) —
   useEffect(() => {
-    // Drag-over visual: use the dragover event (fires ~30 times/sec while
-    // dragging) plus a 100ms idle timeout. When dragover stops firing, the
-    // timer fires and we revert. This is robust against the dragenter/leave
-    // child-element flicker.
     let dragTimer = null;
     const onOver = (e) => {
       e.preventDefault();
@@ -424,23 +432,33 @@ function App() {
       e.preventDefault();
       if (dragTimer) { clearTimeout(dragTimer); dragTimer = null; }
       if (mode === 'converting') {
-        setMode('converting'); // restore (was on 'drag')
+        setMode('converting');
         return;
       }
       setMode('idle');
 
-      // PySide6 shell intercepts drops at the Qt layer and pushes real disk
-      // paths via window.__onFilesDropped before this HTML5 event ever fires
-      // (when it fires at all — Qt usually consumes the event entirely). If
-      // __onFilesDropped has already been called for this drag, skip the
-      // byte-stream path so we don't end up with two queue rows per file
-      // (one with real paths, one with temp paths).
+      // In Tauri, native drag-drop fires via tauri://drag-drop → __onFilesDropped
+      // with real disk paths. The HTML5 path is a fallback and only handles bytes
+      // (no real paths). In unpack mode we always need real paths, so skip HTML5.
+      if (unpackModeRef.current) {
+        // If images were dropped in unpack mode, auto-switch to pack and fall through
+        const files = Array.from(e.dataTransfer.files || []);
+        if (files.some(f => /\.(png|jpe?g|tga|bmp|tiff?|webp)$/i.test(f.name))) {
+          setUnpackMode(false);
+          unpackModeRef.current = false;
+          await api('clear_queue');
+          setQueueRows([]);
+          // fall through — HTML5 image processing below will handle the files
+        } else {
+          return;
+        }
+      }
+
+      // Pack mode HTML5 fallback: skip if native already fired
       if (window.__nativeDropFiredAt && (Date.now() - window.__nativeDropFiredAt < 1500)) {
         return;
       }
 
-      // Fallback path: bytes only (no real disk paths). Used only if the Qt
-      // layer didn't see this drop for some reason.
       const items = e.dataTransfer.items;
       const collected = [];
       async function walk(entry, prefix) {
@@ -470,7 +488,18 @@ function App() {
 
       const okExt = /\.(png|jpe?g|tga|bmp|tiff?|webp)$/i;
       const usable = collected.filter(({ path }) => okExt.test(path));
-      if (!usable.length) return;
+      if (!usable.length) {
+        // DDS dropped in pack mode via HTML5 — auto-switch (can't process via bytes)
+        if (collected.some(({ path }) => /\.dds$/i.test(path))) {
+          setUnpackMode(true);
+          unpackModeRef.current = true;
+          await api('clear_unpack_queue');
+          setQueueRows([]);
+          // Tauri native drop will have already fired __onFilesDropped with real paths;
+          // this HTML5 path is just a belt-and-suspenders mode switch.
+        }
+        return;
+      }
 
       const payload = await Promise.all(usable.map(async ({ path, file }) => {
         const buf = await file.arrayBuffer();
@@ -496,18 +525,48 @@ function App() {
     };
   }, [mode]);
 
-  // — Globals Python pushes to —
+  // — Globals Python / Tauri push to —
   useEffect(() => {
     window.__onFilesDropped = async (paths) => {
-      // Called from the PySide6 shell's dropEvent with REAL disk paths.
-      // "Same as input" routing relies on these real paths to put each set's
-      // outputs in its own source folder.
+      // Called by Tauri's tauri://drag-drop event with real disk paths.
       window.__nativeDropFiredAt = Date.now();
-      const rows = await api('scan_paths', paths);
-      if (rows && rows.length) {
-        setQueueRows(rows);
-        setMode('idle');
+      const isUnpack = unpackModeRef.current;
+      const isDds  = p => /\.dds$/i.test(p);
+      const isImg  = p => /\.(png|jpe?g|tga|bmp|tiff?|webp)$/i.test(p);
+      const filtered = isUnpack
+        ? paths.filter(isDds)
+        : paths.filter(isImg);
+
+      if (!filtered.length) {
+        // Auto-switch mode and process when the user drops the wrong file type.
+        const ddsFiles = paths.filter(isDds);
+        const imgFiles = paths.filter(isImg);
+        if (!isUnpack && ddsFiles.length) {
+          // Pack mode + DDS dropped → switch to Unpack and scan
+          setUnpackMode(true);
+          unpackModeRef.current = true;
+          await api('clear_unpack_queue');
+          setQueueRows([]);
+          const rows = await api('scan_dds_paths', ddsFiles);
+          setMode('idle');
+          if (rows && rows.length) setQueueRows(rows);
+        } else if (isUnpack && imgFiles.length) {
+          // Unpack mode + images dropped → switch to Pack and scan
+          setUnpackMode(false);
+          unpackModeRef.current = false;
+          await api('clear_queue');
+          setQueueRows([]);
+          const rows = await api('scan_paths', imgFiles);
+          setMode('idle');
+          if (rows && rows.length) setQueueRows(rows);
+        } else {
+          setMode('idle');
+        }
+        return;
       }
+      const rows = await api(isUnpack ? 'scan_dds_paths' : 'scan_paths', filtered);
+      setMode('idle');
+      if (rows && rows.length) setQueueRows(rows);
     };
     window.__nativeDragEnter = () => { if (mode !== 'converting') setMode('drag'); };
     window.__nativeDragLeave = () => { if (mode !== 'converting') setMode('idle'); };
@@ -528,8 +587,6 @@ function App() {
     };
     window.__onBatchDone = async () => {
       setMode('idle');
-      // No more giant centred popup. Each completed row carries its own
-      // open-folder icon in the status block instead.
     };
     return () => {
       delete window.__onFilesDropped;
@@ -538,11 +595,28 @@ function App() {
     };
   }, []);
 
+  // — Mode switch: clears queue and switches pack ↔ unpack —
+  const handleModeSwitch = async (toUnpack) => {
+    if (mode === 'converting') return;
+    setUnpackMode(toUnpack);
+    await api(toUnpack ? 'clear_unpack_queue' : 'clear_queue');
+    setQueueRows([]);
+    setMode('idle');
+  };
+
   const onPickFiles = async () => {
-    const paths = await api('pick_files');
-    if (paths && paths.length) {
-      const rows = await api('scan_paths', paths);
-      if (rows) setQueueRows(rows);
+    if (unpackMode) {
+      const paths = await api('pick_dds_files');
+      if (paths && paths.length) {
+        const rows = await api('scan_dds_paths', paths);
+        if (rows) setQueueRows(rows);
+      }
+    } else {
+      const paths = await api('pick_files');
+      if (paths && paths.length) {
+        const rows = await api('scan_paths', paths);
+        if (rows) setQueueRows(rows);
+      }
     }
   };
 
@@ -557,7 +631,7 @@ function App() {
   const onScanFolder = async () => {
     const path = await api('pick_scan_folder');
     if (path) {
-      const rows = await api('scan_paths', [path]);
+      const rows = await api(unpackMode ? 'scan_dds_paths' : 'scan_paths', [path]);
       if (rows) setQueueRows(rows);
     }
   };
@@ -566,22 +640,31 @@ function App() {
   const onAddFiles = onPickFiles;
   const onAddFolder = onScanFolder;
 
+  const doConvert = () => {
+    setMode('converting');
+    api(unpackMode ? 'start_unpack' : 'start_convert', {});
+  };
+
   const onConvert = async () => {
     if (!queueRows.length || mode === 'converting') return;
-    setMode('converting');
-    await api('start_convert', {});
+    const result = await api('check_conflicts');
+    if (result && typeof result.count === 'number' && result.count > 0) {
+      setOverwritePending(result);
+      return;
+    }
+    doConvert();
   };
 
   const onClearQueue = async () => {
     if (mode === 'converting') return;
-    await api('clear_queue');
+    await api(unpackMode ? 'clear_unpack_queue' : 'clear_queue');
     setQueueRows([]);
     setMode('idle');
   };
 
   const onRemoveRow = async (setId) => {
     if (mode === 'converting') return;
-    await api('remove_set', setId);
+    await api(unpackMode ? 'remove_unpack_set' : 'remove_set', setId);
     setQueueRows(prev => prev.filter(r => r.set_id !== setId));
   };
 
@@ -621,12 +704,13 @@ function App() {
           <Header
             theme={theme}
             lodOn={lodOn} setLodOn={setLodOn}
-            fastMode={fastMode} setFastMode={setFastMode}
             outputFolder={outputFolder}
             sameAsInput={sameAsInput} setSameAsInput={setSameAsInput}
             lod0Size={lod0Size} setLod0Size={setLod0Size}
             onHelp={() => setHelpOpen(true)}
             onPickFolder={onPickFolder}
+            unpackMode={unpackMode}
+            onModeSwitch={handleModeSwitch}
           />
 
           <div className={`hero ${dragOver ? 'drag' : ''}`}>
@@ -635,8 +719,8 @@ function App() {
 
             {!showingQueue && (
               theme === 'anno'
-                ? <AnnoHeroEmpty dragOver={dragOver} onPickFiles={onPickFiles} onPickFolder={onScanFolder} />
-                : <ModernHeroEmpty dragOver={dragOver} onPickFiles={onPickFiles} onPickFolder={onScanFolder} />
+                ? <AnnoHeroEmpty dragOver={dragOver} onPickFiles={onPickFiles} onPickFolder={onScanFolder} unpackMode={unpackMode} />
+                : <ModernHeroEmpty dragOver={dragOver} onPickFiles={onPickFiles} onPickFolder={onScanFolder} unpackMode={unpackMode} />
             )}
 
             {showingQueue && (
@@ -645,12 +729,14 @@ function App() {
                     canClear={mode !== 'converting'}
                     onAddFiles={onAddFiles} onAddFolder={onAddFolder}
                     onShowLog={(row) => setErrorModal({ name: row.name, text: row.error_text || '' })}
-                    onRemove={onRemoveRow} />
+                    onRemove={onRemoveRow}
+                    unpackMode={unpackMode} />
                 : <ModernQueue rows={queueRows} onClear={onClearQueue}
                     canClear={mode !== 'converting'}
                     onAddFiles={onAddFiles} onAddFolder={onAddFolder}
                     onShowLog={(row) => setErrorModal({ name: row.name, text: row.error_text || '' })}
-                    onRemove={onRemoveRow} />
+                    onRemove={onRemoveRow}
+                    unpackMode={unpackMode} />
             )}
           </div>
 
@@ -659,12 +745,21 @@ function App() {
             mode={mode}
             enabled={queueRows.length > 0}
             onClick={onConvert}
+            unpackMode={unpackMode}
           />
           <Footer theme={theme} mode={mode}
                   vram={vram} parallel={parallel}
                   onToggleTheme={() => setTheme(t => t === 'anno' ? 'modern' : 'anno')} />
 
-          {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
+          {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} unpackMode={unpackMode} />}
+          {overwritePending && (
+            <OverwriteDialog
+              count={overwritePending.count}
+              examples={overwritePending.examples}
+              onCancel={() => setOverwritePending(null)}
+              onOverwrite={() => { setOverwritePending(null); doConvert(); }}
+            />
+          )}
           {errorModal && (
             <ErrorLogDialog
               name={errorModal.name}
@@ -672,6 +767,39 @@ function App() {
               onClose={() => setErrorModal(null)}
             />
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OverwriteDialog({ count, examples, onOverwrite, onCancel }) {
+  return (
+    <div className="scrim" onClick={onCancel}>
+      <div className="help-dialog" style={{ width: 460, maxHeight: 'none' }} onClick={e => e.stopPropagation()}>
+        <div className="help-title-row">
+          <div className="help-title">Overwrite Existing Files?</div>
+          <button className="help-close" onClick={onCancel}>✕</button>
+        </div>
+        <div className="help-body" style={{ padding: '20px 24px 8px' }}>
+          <p style={{ margin: '0 0 12px', lineHeight: 1.6 }}>
+            <strong>{count}</strong> output file{count !== 1 ? 's' : ''} already exist in the output
+            folder. Do you want to overwrite {count !== 1 ? 'them' : 'it'}?
+          </p>
+          {examples && examples.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 4 }}>
+              {examples.map(f => (
+                <span key={f} className="code" style={{ fontSize: 11, opacity: 0.7 }}>{f}</span>
+              ))}
+              {count > examples.length && (
+                <span style={{ fontSize: 11, opacity: 0.5 }}>…and {count - examples.length} more</span>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="help-actions" style={{ gap: 10 }}>
+          <button className="btn-ghost" onClick={onCancel} style={{ flex: 1 }}>Cancel</button>
+          <button className="btn-got-it" onClick={onOverwrite} style={{ flex: 1 }}>Overwrite</button>
         </div>
       </div>
     </div>

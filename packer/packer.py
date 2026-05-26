@@ -149,6 +149,7 @@ def _assign(ts: TextureSet, mt: MapType, p: Path) -> None:
     elif mt == MapType.HEIGHT:    ts.height = p
     elif mt == MapType.RM:        ts.rm = p
     elif mt == MapType.ORM:       ts.orm = p
+    elif mt == MapType.EMISSION:  ts.emission = p
 
 
 # ─── Packed-PBR post-process ─────────────────────────────────────────────────
@@ -312,6 +313,9 @@ def build_packed_normal(ts: TextureSet, size: tuple[int, int]) -> Image.Image | 
             return None
 
     r, g, b = rgb_img.split()
+    # Input normals from Blender / Maya use OpenGL convention (Y-up).
+    # Anno expects DirectX (Y-down) — flip the green channel.
+    g = _invert(g)
 
     # Glossiness alpha
     if ts.gloss is not None:
@@ -338,6 +342,19 @@ def build_packed_height(ts: TextureSet, size: tuple[int, int]) -> Image.Image | 
     return _resize_l(_load_l(ts.height), size)
 
 
+def build_packed_mask(ts: TextureSet, size: tuple[int, int]) -> Image.Image | None:
+    """RGB = emission/night-glow, A = 255 (secondary night mask, default white).
+
+    Returns None if no emission source.
+    """
+    if ts.emission is None:
+        return None
+    em = _resize_rgba(_load_rgba(ts.emission), size)
+    r, g, b, _ = em.split()
+    a = _new_l(size, 255)
+    return Image.merge("RGBA", (r, g, b, a))
+
+
 def _invert(img_l: Image.Image) -> Image.Image:
     """Channel-wise invert of an 'L' image — returns 255 − pixel."""
     from PIL import ImageChops
@@ -351,6 +368,7 @@ DDS_SUFFIXES = {
     "metal": "metal",
     "norm": "norm",
     "height": "height",
+    "mask": "mask",
 }
 
 
@@ -389,6 +407,8 @@ def plan_set(ts: TextureSet, *, lod0_cap: str, selected_lods: Iterable[int],
         maps.append("norm")
     if ts.height is not None:
         maps.append("height")
+    if ts.emission is not None:
+        maps.append("mask")
 
     lods_set = {MANDATORY_LOD, *selected_lods} & set(AVAILABLE_LODS)
     return SetPlan(
@@ -407,6 +427,7 @@ def build_map_at_lod(ts: TextureSet, map_type: str, size: tuple[int, int]) -> Im
     if map_type == "metal":  return build_packed_metal(ts, size)
     if map_type == "norm":   return build_packed_normal(ts, size)
     if map_type == "height": return build_packed_height(ts, size)
+    if map_type == "mask":   return build_packed_mask(ts, size)
     raise ValueError(f"unknown map_type {map_type!r}")
 
 

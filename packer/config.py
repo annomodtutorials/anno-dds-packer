@@ -53,6 +53,7 @@ class MapType(str, Enum):
     HEIGHT = "height"
     RM = "rm"
     ORM = "orm"
+    EMISSION = "emission"
 
 
 # Order matters: longer suffixes must be matched first so '_basecolor' doesn't
@@ -85,6 +86,9 @@ SUFFIX_MAP: tuple[tuple[str, MapType], ...] = (
     ("ao", MapType.AO),
     ("bc", MapType.DIFF),
     ("rm", MapType.RM),
+    ("emissive", MapType.EMISSION),
+    ("emission", MapType.EMISSION),
+    ("nightmask", MapType.EMISSION),
 )
 
 SEPARATORS = ("_", "-", ".")
@@ -108,6 +112,7 @@ class TextureSet:
     height: Path | None = None
     rm: Path | None = None
     orm: Path | None = None
+    emission: Path | None = None
     synthetic_flat_normal: bool = False
     warnings: list[str] = field(default_factory=list)
 
@@ -117,11 +122,12 @@ class TextureSet:
             for v in (
                 self.diff, self.opacity, self.metal, self.ao, self.norm,
                 self.gloss, self.rough, self.height, self.rm, self.orm,
+                self.emission,
             )
         )
 
     def primary_thumbnail_source(self) -> Path | None:
-        return self.diff or self.rm or self.orm or self.metal or self.norm or self.height
+        return self.diff or self.rm or self.orm or self.metal or self.norm or self.height or self.emission
 
 
 # ─── Misc ─────────────────────────────────────────────────────────────────────

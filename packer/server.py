@@ -44,6 +44,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import packer as packer_mod
 import settings as settings_mod
+import unpacker as unpacker_mod
 import vram as vram_mod
 from config import LOD0_SIZE_AS_INPUT, LOD0_SIZE_OPTIONS, TextureSet
 from events import ProgressEvent
@@ -80,6 +81,12 @@ _active_sets = 0
 _last_output_dirs: set[str] = set()
 _completed_rows: dict[int, dict] = {}
 
+# ─── Unpack state ─────────────────────────────────────────────────────────────
+_unpack_sets: dict[int, object] = {}   # int -> unpacker_mod.UnpackSet
+_is_unpacking = False
+_unpack_active_sets = 0
+_unpack_completed_rows: dict[int, dict] = {}
+
 # SSE event queue (asyncio) for pushing progress to the webview
 _loop: asyncio.AbstractEventLoop | None = None
 _sse_queue: asyncio.Queue | None = None
@@ -94,9 +101,10 @@ def _ts_inputs(ts: TextureSet) -> list[str]:
     if ts.gloss is not None:   out.append("gloss")
     if ts.rough is not None:   out.append("rough")
     if ts.height is not None:  out.append("height")
-    if ts.rm is not None:      out.append("rm")
-    if ts.orm is not None:     out.append("orm")
-    if ts.opacity is not None: out.append("opacity")
+    if ts.rm is not None:       out.append("rm")
+    if ts.orm is not None:      out.append("orm")
+    if ts.opacity is not None:  out.append("opacity")
+    if ts.emission is not None: out.append("emission")
     return out
 
 
@@ -115,6 +123,8 @@ def _ts_outputs(ts: TextureSet) -> list[str]:
         out.append("metal")
     if ts.height is not None:
         out.append("height")
+    if ts.emission is not None:
+        out.append("mask")
     return out
 
 
@@ -156,6 +166,46 @@ def _all_queue_rows() -> list[dict]:
     return rows
 
 
+def _all_unpack_queue_rows() -> list[dict]:
+    rows: list[dict] = []
+    total = len(_unpack_sets)
+    for i, (sid, us) in enumerate(_unpack_sets.items()):
+        comp = _unpack_completed_rows.get(sid)
+        input_dds_types = us.map_types_ordered()
+        output_png_types = us.output_png_types()
+        if comp:
+            rows.append({
+                "set_id": sid,
+                "name": us.base_name,
+                "input_dds_types": input_dds_types,
+                "output_png_types": output_png_types,
+                "status": comp["status"],
+                "pct": comp["pct"],
+                "label": comp["label"],
+                "eta_text": comp["eta_text"],
+                "queue_position": f"{i + 1} of {total}",
+                "maps_done": comp["maps_done"],
+                "output_dir": comp["output_dir"],
+                "error_text": comp["error_text"],
+            })
+        else:
+            rows.append({
+                "set_id": sid,
+                "name": us.base_name,
+                "input_dds_types": input_dds_types,
+                "output_png_types": output_png_types,
+                "status": "queued",
+                "pct": 0,
+                "label": "WAITING IN QUEUE",
+                "eta_text": f"Position {i + 1} of {total}",
+                "queue_position": f"{i + 1} of {total}",
+                "maps_done": [],
+                "output_dir": "",
+                "error_text": "",
+            })
+    return rows
+
+
 def _push_to_sse(event_type: str, data: dict | str) -> None:
     """Thread-safe push to SSE queue."""
     if _loop is None or _sse_queue is None:
@@ -164,6 +214,53 @@ def _push_to_sse(event_type: str, data: dict | str) -> None:
         _sse_queue.put({"event": event_type, "data": data}),
         _loop,
     )
+
+
+def _push_unpack_progress(ev: ProgressEvent) -> None:
+    global _unpack_active_sets
+    if ev.status == "done" or ev.status == "error":
+        _unpack_active_sets = max(0, _unpack_active_sets - 1)
+    elif ev.status == "encoding" and ev.pct < 5:
+        _unpack_active_sets += 1
+    if ev.output_dir:
+        _last_output_dirs.add(ev.output_dir)
+
+    eta_text = ""
+    if ev.status == "done":
+        eta_text = "100%"
+    elif ev.eta_s is not None:
+        mins = int(ev.eta_s // 60)
+        secs = int(ev.eta_s % 60)
+        eta_text = f"{int(ev.pct)}%  ·  {mins:02d}:{secs:02d} ETA"
+    else:
+        eta_text = f"{int(ev.pct)}%"
+
+    maps_done = list(ev.maps_done) if ev.maps_done else []
+    error_text = ev.error or ""
+    output_dir = ev.output_dir or ""
+
+    if ev.status in ("done", "error"):
+        _unpack_completed_rows[ev.set_id] = {
+            "status": ev.status,
+            "pct": float(ev.pct),
+            "label": ev.label or "",
+            "eta_text": eta_text,
+            "maps_done": maps_done,
+            "output_dir": output_dir,
+            "error_text": error_text,
+        }
+
+    payload = {
+        "set_id": ev.set_id,
+        "status": ev.status,
+        "pct": float(ev.pct),
+        "label": ev.label or "",
+        "eta_text": eta_text,
+        "maps_done": maps_done,
+        "error_text": error_text,
+        "output_dir": output_dir,
+    }
+    _push_to_sse("progress", payload)
 
 
 def _push_progress(ev: ProgressEvent) -> None:
@@ -308,7 +405,18 @@ async def scan_paths(request: Request):
         parent = str(primary.parent) if primary else ""
         key = (parent, ts.base_name)
         if key in existing_keys:
-            _sets[existing_keys[key]] = ts
+            # Merge: copy any newly-provided fields into the existing set
+            # so a single dropped file doesn't wipe the rest of the set.
+            existing_ts = _sets[existing_keys[key]]
+            for attr in ('diff', 'opacity', 'metal', 'ao', 'norm',
+                         'gloss', 'rough', 'height', 'rm', 'orm', 'emission'):
+                new_val = getattr(ts, attr, None)
+                if new_val is not None:
+                    setattr(existing_ts, attr, new_val)
+            # If a real normal was just added, clear the synthetic-flat flag
+            if isinstance(existing_ts.norm, Path):
+                existing_ts.synthetic_flat_normal = False
+            packer_mod.apply_packed_pbr_postprocess([existing_ts])
         else:
             _sets[next_sid] = ts
             next_sid += 1
@@ -375,7 +483,7 @@ async def parallel_cap():
 async def parallel_status():
     s = _settings
     cap = s.parallel_sets_max or min(os.cpu_count() or 4, 8)
-    return {"active": _active_sets, "cap": cap}
+    return {"active": _active_sets + _unpack_active_sets, "cap": cap}
 
 
 @app.post("/api/cpu_count")
@@ -412,6 +520,143 @@ async def last_output_dirs():
     return sorted(_last_output_dirs)
 
 
+# ─── Unpack scan + convert ────────────────────────────────────────────────────
+
+@app.post("/api/scan_dds_paths")
+async def scan_dds_paths(request: Request):
+    global _unpack_sets
+    raw_paths = await request.json()
+    if not raw_paths:
+        return []
+    paths = [Path(p) for p in raw_paths if p]
+    new_sets = unpacker_mod.scan_dds_paths(paths)
+
+    existing_keys: dict[tuple[str, str], int] = {}
+    for sid, us in _unpack_sets.items():
+        primary = us.primary_path()
+        parent = str(primary.parent) if primary else ""
+        existing_keys[(parent, us.base_name)] = sid
+
+    next_sid = (max(_unpack_sets.keys()) + 1) if _unpack_sets else 0
+    for us in new_sets:
+        primary = us.primary_path()
+        parent = str(primary.parent) if primary else ""
+        key = (parent, us.base_name)
+        if key in existing_keys:
+            # Merge: add/replace DDS files by map_type+lod so dropping a
+            # single DDS doesn't wipe the rest of the set.
+            existing_us = _unpack_sets[existing_keys[key]]
+            for new_file in us.files:
+                existing_us.files = [
+                    f for f in existing_us.files
+                    if not (f.map_type == new_file.map_type and f.lod == new_file.lod)
+                ]
+                existing_us.files.append(new_file)
+        else:
+            _unpack_sets[next_sid] = us
+            next_sid += 1
+    return _all_unpack_queue_rows()
+
+
+@app.post("/api/start_unpack")
+async def start_unpack(request: Request):
+    global _worker, _is_unpacking, _unpack_active_sets
+    if _is_unpacking or not _unpack_sets:
+        return False
+    s = _settings
+    cap = s.parallel_sets_max or min(os.cpu_count() or 4, 8)
+    out_root = Path(s.output_dir) if s.output_dir else Path.cwd()
+    items = list(_unpack_sets.items())
+    _is_unpacking = True
+
+    def worker() -> None:
+        global _is_unpacking, _unpack_active_sets
+        try:
+            unpacker_mod.unpack_sets_parallel(
+                items,
+                out_root=out_root,
+                same_as_input=s.same_as_input,
+                cap=cap,
+                push_event=_push_unpack_progress,
+            )
+        except Exception:
+            log.exception("unpack worker crashed")
+        finally:
+            _is_unpacking = False
+            _unpack_active_sets = 0
+            _push_to_sse("batch_done", {})
+
+    t = threading.Thread(target=worker, daemon=True, name="ddsp-unpack")
+    t.start()
+    _worker = t
+    return True
+
+
+@app.post("/api/clear_unpack_queue")
+async def clear_unpack_queue():
+    global _unpack_sets, _unpack_completed_rows
+    if _is_unpacking:
+        return False
+    _unpack_sets = {}
+    _unpack_completed_rows.clear()
+    return True
+
+
+@app.post("/api/remove_unpack_set")
+async def remove_unpack_set(request: Request):
+    if _is_unpacking:
+        return False
+    body = await request.json()
+    set_id = int(body) if not isinstance(body, dict) else int(body.get("set_id", -1))
+    _unpack_sets.pop(set_id, None)
+    return True
+
+
+@app.post("/api/check_conflicts")
+async def check_conflicts():
+    """Return count of output files that already exist on disk.
+
+    Used by the frontend to warn the user before overwriting.
+    Checks both the pack queue (_sets) and unpack queue (_unpack_sets).
+    """
+    s = _settings
+    out_root = Path(s.output_dir) if s.output_dir else None
+    conflict_files: list[str] = []
+
+    # Pack mode: expected outputs are  {base}_{maptype}_{lod}.dds
+    for ts in _sets.values():
+        if s.same_as_input:
+            src = ts.primary_thumbnail_source()
+            out_dir = src.parent if src else (out_root or Path.cwd())
+        else:
+            out_dir = out_root or Path.cwd()
+        if out_dir.exists():
+            for f in out_dir.glob(f"{ts.base_name}_*.dds"):
+                conflict_files.append(str(f))
+
+    # Unpack mode: expected outputs are  {base}_{channel}_{lod}.png
+    for us in _unpack_sets.values():
+        seen: set[str] = set()
+        for dds_file in us.files:
+            if s.same_as_input:
+                out_dir = dds_file.path.parent
+            else:
+                out_dir = out_root or Path.cwd()
+            key = str(out_dir)
+            if key in seen:
+                continue
+            seen.add(key)
+            if out_dir.exists():
+                for f in out_dir.glob(f"{us.base_name}_*.png"):
+                    conflict_files.append(str(f))
+
+    # Return count + first 6 examples for the dialog
+    return {
+        "count": len(conflict_files),
+        "examples": [Path(f).name for f in conflict_files[:6]],
+    }
+
+
 # ─── No-op stubs for Tauri-handled methods ────────────────────────────────────
 # These are handled by Tauri Rust commands. The stubs exist so any stray
 # fetch call doesn't 404.
@@ -431,6 +676,10 @@ async def pick_folder_stub():
 @app.post("/api/pick_scan_folder")
 async def pick_scan_folder_stub():
     return ""
+
+@app.post("/api/pick_dds_files")
+async def pick_dds_files_stub():
+    return []
 
 @app.post("/api/open_folder")
 async def open_folder_stub():
