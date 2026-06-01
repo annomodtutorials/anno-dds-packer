@@ -94,6 +94,67 @@ def encode_dds(src_png: Path, dst_dds: Path, *, fast: bool = False,
     patch_dxgi_format_98(dst_dds)
 
 
+# ─── Icon encoder (BC7_UNORM_SRGB, no header patch) ────────────────────────
+
+def encode_dds_icon(src_png: Path, dst_dds: Path, *, fast: bool = False,
+                    full_mips: bool = True, gpu: bool = True) -> None:
+    """Encode src_png as BC7_UNORM_SRGB (DXGI 99) for Anno UI icon textures.
+
+    Identical to encode_dds except:
+    - Uses ``-f BC7_UNORM_SRGB`` so texconv writes an sRGB-tagged surface.
+    - Does NOT call patch_dxgi_format_98 — icons stay at DXGI 99 (BC7_UNORM),
+      which is what the game runtime expects for icon assets.
+
+    Raises EncodeError on texconv failure.
+    """
+    if not TEXCONV_EXE.exists():
+        raise EncodeError(f"texconv.exe not found at {TEXCONV_EXE}")
+    if not src_png.exists():
+        raise EncodeError(f"input PNG not found: {src_png}")
+    dst_dds.parent.mkdir(parents=True, exist_ok=True)
+
+    target_name = dst_dds.stem
+    if src_png.stem != target_name:
+        relink = src_png.parent / f"{target_name}.png"
+        if relink != src_png:
+            relink.write_bytes(src_png.read_bytes())
+            src_for_cmd = relink
+        else:
+            src_for_cmd = src_png
+    else:
+        src_for_cmd = src_png
+
+    args: list[str] = [
+        str(TEXCONV_EXE),
+        "-f", "BC7_UNORM_SRGB",
+        "-y",
+        "-o", str(dst_dds.parent),
+    ]
+    if fast:
+        args += ["-bc", "q"]
+    if full_mips:
+        args += ["-m", "0"]
+    if not gpu:
+        args += ["-nogpu"]
+    args.append(str(src_for_cmd))
+
+    log.debug("texconv (icon): %s", " ".join(args))
+    try:
+        p = subprocess.run(args, capture_output=True, text=True, timeout=120,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise EncodeError(f"texconv invocation failed: {e}") from e
+
+    if p.returncode != 0:
+        raise EncodeError(
+            f"texconv exited {p.returncode}\n--- stdout ---\n{p.stdout}\n--- stderr ---\n{p.stderr}"
+        )
+    if not dst_dds.exists():
+        raise EncodeError(f"texconv reported success but {dst_dds} does not exist\n"
+                          f"--- stdout ---\n{p.stdout}")
+    # No patch — icon DDS stays at DXGI 99 (BC7_UNORM_SRGB).
+
+
 # ─── DXGI header patch ───────────────────────────────────────────────────────
 
 def patch_dxgi_format_98(dds_path: Path) -> None:

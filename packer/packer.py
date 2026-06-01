@@ -29,6 +29,7 @@ from config import (
     SUFFIX_MAP,
     MapType,
     TextureSet,
+    is_icon_stem,
     lod_scale,
 )
 
@@ -104,6 +105,11 @@ def scan_paths(paths: Iterable[Path]) -> list[TextureSet]:
         # different folders don't collide.
         key = f"{p.parent.as_posix()}::{base}"
         ts = by_base.setdefault(key, TextureSet(base_name=base))
+        # Mark as UI icon when the original stem starts with "icon".
+        # Icons bypass all PBR channel packing — straight RGBA passthrough,
+        # BC7_UNORM_SRGB (DXGI 99), no map-type segment in the output name.
+        if is_icon_stem(p.stem):
+            ts.is_icon = True
         _assign(ts, mt, p)
 
     sets = list(by_base.values())
@@ -163,6 +169,8 @@ def apply_packed_pbr_postprocess(sets: list[TextureSet]) -> None:
     This step is idempotent — safe to call multiple times.
     """
     for ts in sets:
+        if ts.is_icon:
+            continue  # icons bypass all PBR channel logic
         has_packed = (ts.rm is not None) or (ts.orm is not None)
         if has_packed and ts.norm is None:
             ts.synthetic_flat_normal = True
@@ -355,6 +363,18 @@ def build_packed_mask(ts: TextureSet, size: tuple[int, int]) -> Image.Image | No
     return Image.merge("RGBA", (r, g, b, a))
 
 
+def build_icon(ts: TextureSet, size: tuple[int, int]) -> Image.Image | None:
+    """Straight RGBA passthrough for UI icon textures.
+
+    No channel manipulation — the source image is resized and written as-is.
+    Returns None if no source image is available (should not happen if the
+    set was classified as an icon, since the file is stored in ts.diff).
+    """
+    if ts.diff is None:
+        return None
+    return _resize_rgba(_load_rgba(ts.diff), size)
+
+
 def _invert(img_l: Image.Image) -> Image.Image:
     """Channel-wise invert of an 'L' image — returns 255 − pixel."""
     from PIL import ImageChops
@@ -373,7 +393,9 @@ DDS_SUFFIXES = {
 
 
 def dds_output_path(out_dir: Path, set_name: str, map_type: str, lod: int) -> Path:
-    """out_dir/<set>_<map>_<lod>.dds"""
+    """out_dir/<set>_<map>_<lod>.dds  — or  out_dir/<set>_<lod>.dds  for icons."""
+    if map_type == "icon":
+        return out_dir / f"{set_name}_{lod}.dds"
     return out_dir / f"{set_name}_{DDS_SUFFIXES[map_type]}_{lod}.dds"
 
 
@@ -397,18 +419,23 @@ def plan_set(ts: TextureSet, *, lod0_cap: str, selected_lods: Iterable[int],
     lod0 = cap_size(native, lod0_cap)
 
     maps: list[str] = []
-    if ts.diff is not None:
-        maps.append("diff")
-    if (ts.metal is not None) or (ts.orm is not None) or (ts.rm is not None):
-        maps.append("metal")
-    if (isinstance(ts.norm, Path) or ts.synthetic_flat_normal
-            or ts.gloss is not None or ts.rough is not None
-            or ts.rm is not None or ts.orm is not None):
-        maps.append("norm")
-    if ts.height is not None:
-        maps.append("height")
-    if ts.emission is not None:
-        maps.append("mask")
+    if ts.is_icon:
+        # UI icon: single RGBA passthrough, no PBR channel packing.
+        if ts.diff is not None:
+            maps.append("icon")
+    else:
+        if ts.diff is not None:
+            maps.append("diff")
+        if (ts.metal is not None) or (ts.orm is not None) or (ts.rm is not None):
+            maps.append("metal")
+        if (isinstance(ts.norm, Path) or ts.synthetic_flat_normal
+                or ts.gloss is not None or ts.rough is not None
+                or ts.rm is not None or ts.orm is not None):
+            maps.append("norm")
+        if ts.height is not None:
+            maps.append("height")
+        if ts.emission is not None:
+            maps.append("mask")
 
     lods_set = {MANDATORY_LOD, *selected_lods} & set(AVAILABLE_LODS)
     return SetPlan(
@@ -423,6 +450,7 @@ def plan_set(ts: TextureSet, *, lod0_cap: str, selected_lods: Iterable[int],
 
 
 def build_map_at_lod(ts: TextureSet, map_type: str, size: tuple[int, int]) -> Image.Image | None:
+    if map_type == "icon":   return build_icon(ts, size)
     if map_type == "diff":   return build_packed_diffuse(ts, size)
     if map_type == "metal":  return build_packed_metal(ts, size)
     if map_type == "norm":   return build_packed_normal(ts, size)
@@ -486,7 +514,7 @@ def _convert_one_set(
 ) -> None:
     """Worker body — runs one set's encode pipeline."""
     # Import locally so worker can't accidentally touch Tk.
-    from encoder import encode_dds  # type: ignore
+    from encoder import encode_dds, encode_dds_icon  # type: ignore
 
     try:
         plan = plan_set(ts, lod0_cap=lod0_cap, selected_lods=selected_lods,
@@ -571,7 +599,10 @@ def _convert_one_set(
                         img.convert("RGBA").save(tmp_png)
 
                     dst_dds = dds_output_path(base_out, ts.base_name, map_type, lod)
-                    encode_dds(tmp_png, dst_dds, fast=fast_mode)
+                    if ts.is_icon:
+                        encode_dds_icon(tmp_png, dst_dds, fast=fast_mode)
+                    else:
+                        encode_dds(tmp_png, dst_dds, fast=fast_mode)
 
                     done_jobs += 1
                     maps_done_overall.add(map_type)

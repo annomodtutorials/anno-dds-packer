@@ -42,6 +42,22 @@ def lod_scale(lod: int) -> int:
 
 # ─── Map types & suffix tables ────────────────────────────────────────────────
 
+# ─── Icon detection ───────────────────────────────────────────────────────────
+
+def is_icon_stem(stem: str) -> bool:
+    """Return True if the filename stem identifies a UI icon texture.
+
+    A PNG is treated as an icon when its stem starts with "icon" (case-insensitive).
+    Icons bypass all PBR channel-packing logic and are encoded as BC7_UNORM_SRGB
+    (DXGI 99) rather than BC7_TYPELESS (DXGI 98).
+
+    Examples: icon_maya_shrine.png → True  |  wall_diff_0.png → False
+    """
+    return stem.lower().startswith("icon")
+
+
+# ─── Map types & suffix tables ────────────────────────────────────────────────
+
 class MapType(str, Enum):
     DIFF = "diff"
     OPACITY = "opacity"
@@ -114,6 +130,7 @@ class TextureSet:
     orm: Path | None = None
     emission: Path | None = None
     synthetic_flat_normal: bool = False
+    is_icon: bool = False   # True → UI icon; encode as BC7_UNORM_SRGB (DXGI 99), no map-type in output name
     warnings: list[str] = field(default_factory=list)
 
     def has_any(self) -> bool:

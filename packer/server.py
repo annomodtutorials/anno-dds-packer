@@ -93,6 +93,8 @@ _sse_queue: asyncio.Queue | None = None
 
 
 def _ts_inputs(ts: TextureSet) -> list[str]:
+    if ts.is_icon:
+        return ["icon"] if ts.diff is not None else []
     out: list[str] = []
     if ts.diff is not None:    out.append("diff")
     if isinstance(ts.norm, Path): out.append("norm")
@@ -109,6 +111,8 @@ def _ts_inputs(ts: TextureSet) -> list[str]:
 
 
 def _ts_outputs(ts: TextureSet) -> list[str]:
+    if ts.is_icon:
+        return ["icon"] if ts.diff is not None else []
     out: list[str] = []
     if ts.diff is not None:
         out.append("diff")

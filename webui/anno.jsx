@@ -44,6 +44,7 @@ const DDS_LABEL = {
   metal:  'METAL.DDS',
   height: 'HEIGHT.DDS',
   mask:   'MASK.DDS',
+  icon:   'ICON.DDS',
 };
 
 const PNG_OUTPUT_LABEL = {
@@ -78,6 +79,8 @@ const INPUT_CHIP_DEFS = {
   rm:       { kind: 'packed',    label: 'Packed M+R',   icons: ['assets/icon_metal.png', 'assets/icon_roughness.png'] },
   orm:      { kind: 'packed',    label: 'Packed O+R+M', icons: ['assets/icon_ao.png', 'assets/icon_roughness.png', 'assets/icon_metal.png'] },
   emission: { kind: 'emission',  label: 'Emission',     icons: ['assets/icon_emission.png'] },
+  // UI icon textures: straight RGBA, no channel packing, BC7_UNORM_SRGB
+  icon:     { kind: 'diffuse',   label: 'Icon',         icons: ['assets/icon_diffuse.png']  },
 };
 
 // Unpack-mode: icons showing what's packed INSIDE each Anno DDS type
@@ -96,6 +99,7 @@ const DDS_OUTPUT_ICONS = {
   metal:  ['assets/icon_metal.png',   'assets/icon_ao.png'],
   height: ['assets/icon_height.png'],
   mask:   ['assets/icon_emission.png'],
+  icon:   ['assets/icon_diffuse.png'],
 };
 
 // Output PNG chips (unpack mode) — single icon per extracted channel
@@ -135,6 +139,7 @@ function getDdsOutputIcons(mt, inputTypes) {
     }
     case 'height': return ['assets/icon_height.png'];
     case 'mask':   return ['assets/icon_emission.png'];
+    case 'icon':   return ['assets/icon_diffuse.png'];
     default:       return [];
   }
 }
