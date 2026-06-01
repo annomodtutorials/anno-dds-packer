@@ -101,9 +101,15 @@ def encode_dds_icon(src_png: Path, dst_dds: Path, *, fast: bool = False,
     """Encode src_png as BC7_UNORM_SRGB (DXGI 99) for Anno UI icon textures.
 
     Identical to encode_dds except:
-    - Uses ``-f BC7_UNORM_SRGB`` so texconv writes an sRGB-tagged surface.
-    - Does NOT call patch_dxgi_format_98 — icons stay at DXGI 99 (BC7_UNORM),
-      which is what the game runtime expects for icon assets.
+    - Uses ``-f BC7_UNORM_SRGB -srgb`` so texconv treats the (already sRGB) PNG
+      as sRGB on both input and output. Without ``-srgb`` texconv assumes a
+      linear input and applies a second linear→sRGB encode — that double gamma
+      is what washes icons out.
+    - Forces ``-dx10`` so the BC7_UNORM_SRGB tag (DXGI 99) is written in the
+      extended header.
+    - Does NOT call patch_dxgi_format_98 — patching to 98 (BC7_UNORM/TYPELESS)
+      strips the sRGB tag and the game would read the icon as linear (= washed).
+      Icons must stay at DXGI 99 (BC7_UNORM_SRGB).
 
     Raises EncodeError on texconv failure.
     """
@@ -127,6 +133,8 @@ def encode_dds_icon(src_png: Path, dst_dds: Path, *, fast: bool = False,
     args: list[str] = [
         str(TEXCONV_EXE),
         "-f", "BC7_UNORM_SRGB",
+        "-srgb",      # input & output are sRGB — prevents the double-gamma washout
+        "-dx10",      # force DX10 header so the BC7_UNORM_SRGB (DXGI 99) tag is written
         "-y",
         "-o", str(dst_dds.parent),
     ]
