@@ -22,6 +22,7 @@ from PIL import Image
 
 from config import (
     AVAILABLE_LODS,
+    ICON_BACKGROUND_RGB,
     LOD0_SIZE_AS_INPUT,
     LOD0_SIZE_OPTIONS,
     MANDATORY_LOD,
@@ -364,15 +365,28 @@ def build_packed_mask(ts: TextureSet, size: tuple[int, int]) -> Image.Image | No
 
 
 def build_icon(ts: TextureSet, size: tuple[int, int]) -> Image.Image | None:
-    """Straight RGBA passthrough for UI icon textures.
+    """Build an Anno UI icon surface from a transparent-background PNG.
 
-    No channel manipulation — the source image is resized and written as-is.
-    Returns None if no source image is available (should not happen if the
-    set was classified as an icon, since the file is stored in ts.diff).
+    The game stores icons as:
+      RGB = artwork composited over a solid background colour (ICON_BACKGROUND_RGB),
+      A   = the icon mask — the original opacity (selection of opaque pixels).
+
+    So we:
+      1. composite the artwork over the background using its own alpha, so the
+         transparent regions become the solid colour instead of black/garbage,
+      2. carry the original alpha through unchanged as the mask.
+
+    A fully-opaque source (no alpha) stays fully opaque — composite is a no-op
+    and the mask is solid white. Returns None if no source image is available.
     """
     if ts.diff is None:
         return None
-    return _resize_rgba(_load_rgba(ts.diff), size)
+    img = _resize_rgba(_load_rgba(ts.diff), size)
+    _, _, _, mask = img.split()                       # original opacity → mask
+    bg = Image.new("RGBA", size, (*ICON_BACKGROUND_RGB, 255))
+    composited = Image.alpha_composite(bg, img)        # flatten artwork onto bg
+    cr, cg, cb, _ = composited.split()
+    return Image.merge("RGBA", (cr, cg, cb, mask))
 
 
 def _invert(img_l: Image.Image) -> Image.Image:

@@ -56,6 +56,13 @@ def is_icon_stem(stem: str) -> bool:
     return stem.lower().startswith("icon")
 
 
+# Anno stores UI icons as artwork composited over a solid background colour,
+# with the original transparency preserved separately in the alpha channel as
+# a mask. Transparent-background icon PNGs are flattened onto this colour while
+# their alpha is carried through unchanged.
+ICON_BACKGROUND_RGB: tuple[int, int, int] = (0x13, 0x11, 0x11)  # #131111
+
+
 # ─── Map types & suffix tables ────────────────────────────────────────────────
 
 class MapType(str, Enum):
