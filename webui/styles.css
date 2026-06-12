@@ -2128,7 +2128,11 @@ html[data-theme="modern"] .inspector-pill {
 }
 .channel-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); color: #fff; }
 .channel-btn:disabled { opacity: 0.3; cursor: default; }
-.channel-btn.rgba, .channel-btn.ch-RGBA { min-width: 46px; }
+.channel-btn.ch-RGB { min-width: 42px; }
+.channel-btn.ch-RGBA { min-width: 48px; }
+.channel-btn.ch-RGB.active {
+  background: rgba(255, 255, 255, 0.22); border-color: rgba(255, 255, 255, 0.55); color: #fff;
+}
 /* Tint each channel button by its colour when active */
 .channel-btn.ch-R.active { background: rgba(232, 76, 76, 0.85); border-color: rgba(232,76,76,0.9); color: #fff; }
 .channel-btn.ch-G.active { background: rgba(76, 196, 100, 0.85); border-color: rgba(76,196,100,0.9); color: #fff; }

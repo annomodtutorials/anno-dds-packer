@@ -313,14 +313,33 @@ const ANNO_DDS_SEM = {
   icon:   { all: 'Icon',           R: 'Red', G: 'Green', B: 'Blue', A: 'Mask' },
 };
 
+// Per-channel meaning for the *source* maps a user drops (pack inputs),
+// including the packed ones (RM / ORM).
+const SRC_SEM = {
+  diff:     { all: 'Diffuse / Albedo', R: 'Albedo (R)', G: 'Albedo (G)', B: 'Albedo (B)', A: 'Opacity' },
+  opacity:  { all: 'Opacity',          R: 'Opacity',    G: 'Opacity',    B: 'Opacity',    A: 'Opacity' },
+  norm:     { all: 'Normal',           R: 'Normal X',   G: 'Normal Y',   B: 'Normal Z',   A: '—' },
+  metal:    { all: 'Metalness',        R: 'Metalness',  G: 'Metalness',  B: 'Metalness',  A: '—' },
+  ao:       { all: 'Ambient Occlusion',R: 'AO',         G: 'AO',         B: 'AO',         A: '—' },
+  rough:    { all: 'Roughness',        R: 'Roughness',  G: 'Roughness',  B: 'Roughness',  A: '—' },
+  gloss:    { all: 'Glossiness',       R: 'Glossiness', G: 'Glossiness', B: 'Glossiness', A: '—' },
+  height:   { all: 'Height',           R: 'Displacement', G: 'Displacement', B: 'Displacement', A: '—' },
+  emission: { all: 'Emission',         R: 'Emission (R)', G: 'Emission (G)', B: 'Emission (B)', A: '—' },
+  rm:       { all: 'Packed R+M',       R: '(unused)',   G: 'Roughness',  B: 'Metalness',  A: '—' },
+  orm:      { all: 'Packed O+R+M',     R: 'Ambient Occlusion', G: 'Roughness', B: 'Metalness', A: '—' },
+  icon:     { all: 'Icon',             R: 'Red',        G: 'Green',      B: 'Blue',       A: 'Mask' },
+};
+
 // Return {all, R, G, B, A} semantic labels for the texture in `desc`.
 function channelSemantics(desc) {
   const ddsLike =
     (desc.mode === 'unpack' && desc.kind === 'input') ||
     (desc.mode === 'pack' && desc.kind === 'output');
   if (ddsLike && ANNO_DDS_SEM[desc.map_type]) return ANNO_DDS_SEM[desc.map_type];
-  // Plain single-purpose maps (pack inputs, unpack-output channels): the label
-  // applies to the whole image; channels are just colour planes.
+  if (desc.mode === 'pack' && desc.kind === 'input' && SRC_SEM[desc.map_type]) {
+    return SRC_SEM[desc.map_type];
+  }
+  // Unpacked single-channel outputs / unknown: label applies to the whole image.
   return { all: desc.label || '', R: 'Red', G: 'Green', B: 'Blue', A: 'Alpha' };
 }
 
@@ -385,12 +404,20 @@ function ImageInspector({ desc, onClose }) {
     const ctx = cv.getContext('2d');
     if (base.tainted) { ctx.drawImage(base.img, 0, 0); return; }
     if (channel === 'RGBA') { ctx.putImageData(base.data, 0, 0); return; }
-    const off = channel === 'R' ? 0 : channel === 'G' ? 1 : channel === 'B' ? 2 : 3;
+    const s = base.data.data;
     const out = ctx.createImageData(base.w, base.h);
-    const s = base.data.data, d = out.data;
-    for (let i = 0; i < s.length; i += 4) {
-      const v = s[i + off];
-      d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
+    const d = out.data;
+    if (channel === 'RGB') {
+      // colour with alpha forced opaque — ignores opacity / packed-alpha
+      for (let i = 0; i < s.length; i += 4) {
+        d[i] = s[i]; d[i + 1] = s[i + 1]; d[i + 2] = s[i + 2]; d[i + 3] = 255;
+      }
+    } else {
+      const off = channel === 'R' ? 0 : channel === 'G' ? 1 : channel === 'B' ? 2 : 3;
+      for (let i = 0; i < s.length; i += 4) {
+        const v = s[i + off];
+        d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
+      }
     }
     ctx.putImageData(out, 0, 0);
   }, [base, channel]);
@@ -437,8 +464,15 @@ function ImageInspector({ desc, onClose }) {
   };
   const reset = () => { setScale(1); setTx(0); setTy(0); };
 
-  const pill = channel === 'RGBA' ? (sem.all || 'RGBA') : sem[channel];
-  const CH = ['R', 'G', 'B', 'A', 'RGBA'];
+  // RGBA names both parts when the alpha is meaningful (e.g. "Diffuse + Opacity",
+  // "Metal (packed) + Ambient Occlusion"); RGB is just the colour content.
+  const pill =
+    channel === 'RGBA'
+      ? (sem.A && sem.A !== '—' ? `${sem.all} + ${sem.A}` : (sem.all || 'RGBA'))
+      : channel === 'RGB'
+        ? (sem.all || 'RGB')
+        : sem[channel];
+  const CH = ['R', 'G', 'B', 'A', 'RGB', 'RGBA'];
 
   return ReactDOM.createPortal(
     <div className="inspector-scrim" onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}>
@@ -456,7 +490,11 @@ function ImageInspector({ desc, onClose }) {
               <button key={c}
                 className={'channel-btn ch-' + c + (channel === c ? ' active' : '')}
                 disabled={!canChannels && c !== 'RGBA'}
-                title={c === 'RGBA' ? 'Full colour (original)' : `Isolate ${c} channel — ${sem[c]}`}
+                title={
+                  c === 'RGBA' ? 'Full colour + alpha (original)' :
+                  c === 'RGB' ? 'Colour only — ignore alpha (diffuse / normal)' :
+                  `Isolate ${c} channel — ${sem[c]}`
+                }
                 onClick={() => setChannel(c)}>{c}</button>
             ))}
           </div>

@@ -237,9 +237,26 @@ const ANNO_DDS_SEM = {
   mask: { all: "Mask", R: "Emission (R)", G: "Emission (G)", B: "Emission (B)", A: "Night mask" },
   icon: { all: "Icon", R: "Red", G: "Green", B: "Blue", A: "Mask" }
 };
+const SRC_SEM = {
+  diff: { all: "Diffuse / Albedo", R: "Albedo (R)", G: "Albedo (G)", B: "Albedo (B)", A: "Opacity" },
+  opacity: { all: "Opacity", R: "Opacity", G: "Opacity", B: "Opacity", A: "Opacity" },
+  norm: { all: "Normal", R: "Normal X", G: "Normal Y", B: "Normal Z", A: "\u2014" },
+  metal: { all: "Metalness", R: "Metalness", G: "Metalness", B: "Metalness", A: "\u2014" },
+  ao: { all: "Ambient Occlusion", R: "AO", G: "AO", B: "AO", A: "\u2014" },
+  rough: { all: "Roughness", R: "Roughness", G: "Roughness", B: "Roughness", A: "\u2014" },
+  gloss: { all: "Glossiness", R: "Glossiness", G: "Glossiness", B: "Glossiness", A: "\u2014" },
+  height: { all: "Height", R: "Displacement", G: "Displacement", B: "Displacement", A: "\u2014" },
+  emission: { all: "Emission", R: "Emission (R)", G: "Emission (G)", B: "Emission (B)", A: "\u2014" },
+  rm: { all: "Packed R+M", R: "(unused)", G: "Roughness", B: "Metalness", A: "\u2014" },
+  orm: { all: "Packed O+R+M", R: "Ambient Occlusion", G: "Roughness", B: "Metalness", A: "\u2014" },
+  icon: { all: "Icon", R: "Red", G: "Green", B: "Blue", A: "Mask" }
+};
 function channelSemantics(desc) {
   const ddsLike = desc.mode === "unpack" && desc.kind === "input" || desc.mode === "pack" && desc.kind === "output";
   if (ddsLike && ANNO_DDS_SEM[desc.map_type]) return ANNO_DDS_SEM[desc.map_type];
+  if (desc.mode === "pack" && desc.kind === "input" && SRC_SEM[desc.map_type]) {
+    return SRC_SEM[desc.map_type];
+  }
   return { all: desc.label || "", R: "Red", G: "Green", B: "Blue", A: "Alpha" };
 }
 function ImageInspector({ desc, onClose }) {
@@ -314,15 +331,25 @@ function ImageInspector({ desc, onClose }) {
       ctx.putImageData(base.data, 0, 0);
       return;
     }
-    const off = channel === "R" ? 0 : channel === "G" ? 1 : channel === "B" ? 2 : 3;
+    const s = base.data.data;
     const out = ctx.createImageData(base.w, base.h);
-    const s = base.data.data, d = out.data;
-    for (let i = 0; i < s.length; i += 4) {
-      const v = s[i + off];
-      d[i] = v;
-      d[i + 1] = v;
-      d[i + 2] = v;
-      d[i + 3] = 255;
+    const d = out.data;
+    if (channel === "RGB") {
+      for (let i = 0; i < s.length; i += 4) {
+        d[i] = s[i];
+        d[i + 1] = s[i + 1];
+        d[i + 2] = s[i + 2];
+        d[i + 3] = 255;
+      }
+    } else {
+      const off = channel === "R" ? 0 : channel === "G" ? 1 : channel === "B" ? 2 : 3;
+      for (let i = 0; i < s.length; i += 4) {
+        const v = s[i + off];
+        d[i] = v;
+        d[i + 1] = v;
+        d[i + 2] = v;
+        d[i + 3] = 255;
+      }
     }
     ctx.putImageData(out, 0, 0);
   }, [base, channel]);
@@ -376,8 +403,8 @@ function ImageInspector({ desc, onClose }) {
     setTx(0);
     setTy(0);
   };
-  const pill = channel === "RGBA" ? sem.all || "RGBA" : sem[channel];
-  const CH = ["R", "G", "B", "A", "RGBA"];
+  const pill = channel === "RGBA" ? sem.A && sem.A !== "\u2014" ? `${sem.all} + ${sem.A}` : sem.all || "RGBA" : channel === "RGB" ? sem.all || "RGB" : sem[channel];
+  const CH = ["R", "G", "B", "A", "RGB", "RGBA"];
   return ReactDOM.createPortal(
     /* @__PURE__ */ React.createElement("div", { className: "inspector-scrim", onMouseMove: onMove, onMouseUp: onUp, onMouseLeave: onUp }, /* @__PURE__ */ React.createElement("div", { className: "inspector-bar" }, /* @__PURE__ */ React.createElement("div", { className: "inspector-titles" }, /* @__PURE__ */ React.createElement("span", { className: "inspector-name" }, meta ? meta.name : desc.label || "Preview"), /* @__PURE__ */ React.createElement("span", { className: "inspector-sub" }, pill && /* @__PURE__ */ React.createElement("span", { className: "inspector-pill" }, pill), meta && meta.width ? /* @__PURE__ */ React.createElement("span", { className: "inspector-dims" }, meta.width, "\xD7", meta.height) : null)), /* @__PURE__ */ React.createElement("div", { className: "inspector-tools" }, /* @__PURE__ */ React.createElement("div", { className: "channel-btns" }, CH.map((c) => /* @__PURE__ */ React.createElement(
       "button",
@@ -385,7 +412,7 @@ function ImageInspector({ desc, onClose }) {
         key: c,
         className: "channel-btn ch-" + c + (channel === c ? " active" : ""),
         disabled: !canChannels && c !== "RGBA",
-        title: c === "RGBA" ? "Full colour (original)" : `Isolate ${c} channel \u2014 ${sem[c]}`,
+        title: c === "RGBA" ? "Full colour + alpha (original)" : c === "RGB" ? "Colour only \u2014 ignore alpha (diffuse / normal)" : `Isolate ${c} channel \u2014 ${sem[c]}`,
         onClick: () => setChannel(c)
       },
       c
