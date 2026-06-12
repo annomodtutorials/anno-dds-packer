@@ -111,6 +111,48 @@ async function waitForApi(timeoutMs = 15e3) {
   }
   return false;
 }
+function buildPreviewList(rows, unpackMode) {
+  const out = [];
+  for (const row of rows) {
+    if (unpackMode) {
+      for (const mt of row.input_dds_types || []) {
+        out.push({
+          mode: "unpack",
+          kind: "input",
+          set_id: row.set_id,
+          map_type: mt,
+          label: window.DDS_LABEL && window.DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`
+        });
+      }
+      const done = new Set(row.maps_done || []);
+      const outs = row.status === "done" ? (row.output_png_types || []).filter((pt) => done.has(pt)) : row.output_png_types || [];
+      for (const pt of outs) {
+        out.push({
+          mode: "unpack",
+          kind: "output",
+          set_id: row.set_id,
+          map_type: pt,
+          label: window.PNG_OUTPUT_LABEL && window.PNG_OUTPUT_LABEL[pt] || `${pt.toUpperCase()}.PNG`
+        });
+      }
+    } else {
+      for (const c of window.maybeInputChips ? window.maybeInputChips(row.input_map_types) : []) {
+        out.push({ mode: "pack", kind: "input", set_id: row.set_id, map_type: c.type, label: c.label });
+      }
+      for (const mt of row.output_map_types || ["diff", "norm", "metal"]) {
+        out.push({
+          mode: "pack",
+          kind: "output",
+          set_id: row.set_id,
+          map_type: mt,
+          lod: 0,
+          label: window.DDS_LABEL && window.DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`
+        });
+      }
+    }
+  }
+  return out;
+}
 function App() {
   const [ready, setReady] = useState(false);
   const [theme, setTheme] = useState("anno");
@@ -357,14 +399,26 @@ function App() {
     window.__onBatchDone = async () => {
       setMode("idle");
     };
-    window.__openInspector = (desc) => setInspector(desc);
     return () => {
       delete window.__onFilesDropped;
       delete window.__updateProgress;
       delete window.__onBatchDone;
-      delete window.__openInspector;
     };
   }, []);
+  useEffect(() => {
+    window.__openInspector = (desc) => {
+      const items = buildPreviewList(queueRows, unpackMode);
+      let index = items.findIndex((d) => d.mode === desc.mode && d.kind === desc.kind && d.set_id === desc.set_id && d.map_type === desc.map_type);
+      if (index < 0) {
+        items.push(desc);
+        index = items.length - 1;
+      }
+      setInspector({ items, index });
+    };
+    return () => {
+      if (window.__openInspector) delete window.__openInspector;
+    };
+  }, [queueRows, unpackMode]);
   const handleModeSwitch = async (toUnpack) => {
     if (mode === "converting") return;
     setUnpackMode(toUnpack);
@@ -520,7 +574,14 @@ function App() {
       text: errorModal.text,
       onClose: () => setErrorModal(null)
     }
-  ))), inspector && /* @__PURE__ */ React.createElement(ImageInspector, { desc: inspector, onClose: () => setInspector(null) }));
+  ))), inspector && /* @__PURE__ */ React.createElement(
+    ImageInspector,
+    {
+      items: inspector.items,
+      start: inspector.index,
+      onClose: () => setInspector(null)
+    }
+  ));
 }
 function OverwriteDialog({ count, examples, onOverwrite, onCancel }) {
   return /* @__PURE__ */ React.createElement("div", { className: "scrim", onClick: onCancel }, /* @__PURE__ */ React.createElement("div", { className: "help-dialog", style: { width: 460, maxHeight: "none" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("div", { className: "help-title-row" }, /* @__PURE__ */ React.createElement("div", { className: "help-title" }, "Overwrite Existing Files?"), /* @__PURE__ */ React.createElement("button", { className: "help-close", onClick: onCancel }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "help-body", style: { padding: "20px 24px 8px" } }, /* @__PURE__ */ React.createElement("p", { style: { margin: "0 0 12px", lineHeight: 1.6 } }, /* @__PURE__ */ React.createElement("strong", null, count), " output file", count !== 1 ? "s" : "", " already exist in the output folder. Do you want to overwrite ", count !== 1 ? "them" : "it", "?"), examples && examples.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 3, marginTop: 4 } }, examples.map((f) => /* @__PURE__ */ React.createElement("span", { key: f, className: "code", style: { fontSize: 11, opacity: 0.7 } }, f)), count > examples.length && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, opacity: 0.5 } }, "\u2026and ", count - examples.length, " more"))), /* @__PURE__ */ React.createElement("div", { className: "help-actions", style: { gap: 10 } }, /* @__PURE__ */ React.createElement("button", { className: "btn-ghost", onClick: onCancel, style: { flex: 1 } }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: "btn-got-it", onClick: onOverwrite, style: { flex: 1 } }, "Overwrite"))));

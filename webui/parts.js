@@ -259,7 +259,9 @@ function channelSemantics(desc) {
   }
   return { all: desc.label || "", R: "Red", G: "Green", B: "Blue", A: "Alpha" };
 }
-function ImageInspector({ desc, onClose }) {
+function ImageInspector({ items, start, onClose }) {
+  const [idx, setIdx] = useState(start || 0);
+  const desc = items[idx] || items[0];
   const [meta, setMeta] = useState(null);
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
@@ -271,6 +273,7 @@ function ImageInspector({ desc, onClose }) {
   const canvasRef = useRef(null);
   const drag = useRef(null);
   const sem = channelSemantics(desc);
+  const go = (delta) => setIdx((i) => (i + delta + items.length) % items.length);
   useEffect(() => {
     if (window.pywebview && window.pywebview.api) {
       window.pywebview.api.preview_meta({
@@ -290,6 +293,9 @@ function ImageInspector({ desc, onClose }) {
     setLoading(true);
     setBase(null);
     setChannel("RGBA");
+    setScale(1);
+    setTx(0);
+    setTy(0);
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
@@ -362,14 +368,20 @@ function ImageInspector({ desc, onClose }) {
         setTy(0);
       } else if (e.key === "+" || e.key === "=") setScale((s) => Math.min(16, s * 1.25));
       else if (e.key === "-" || e.key === "_") setScale((s) => Math.max(0.1, s / 1.25));
-      else if (canChannels && "rR".includes(e.key)) setChannel("R");
+      else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setIdx((i) => (i + 1) % items.length);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setIdx((i) => (i - 1 + items.length) % items.length);
+      } else if (canChannels && "rR".includes(e.key)) setChannel("R");
       else if (canChannels && "gG".includes(e.key)) setChannel("G");
       else if (canChannels && "bB".includes(e.key)) setChannel("B");
       else if (canChannels && "aA".includes(e.key)) setChannel("A");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, canChannels]);
+  }, [onClose, canChannels, items.length]);
   const onWheel = (e) => {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
@@ -406,7 +418,7 @@ function ImageInspector({ desc, onClose }) {
   const pill = channel === "RGBA" ? sem.A && sem.A !== "\u2014" ? `${sem.all} + ${sem.A}` : sem.all || "RGBA" : channel === "RGB" ? sem.all || "RGB" : sem[channel];
   const CH = ["R", "G", "B", "A", "RGB", "RGBA"];
   return ReactDOM.createPortal(
-    /* @__PURE__ */ React.createElement("div", { className: "inspector-scrim", onMouseMove: onMove, onMouseUp: onUp, onMouseLeave: onUp }, /* @__PURE__ */ React.createElement("div", { className: "inspector-bar" }, /* @__PURE__ */ React.createElement("div", { className: "inspector-titles" }, /* @__PURE__ */ React.createElement("span", { className: "inspector-name" }, meta ? meta.name : desc.label || "Preview"), /* @__PURE__ */ React.createElement("span", { className: "inspector-sub" }, pill && /* @__PURE__ */ React.createElement("span", { className: "inspector-pill" }, pill), meta && meta.width ? /* @__PURE__ */ React.createElement("span", { className: "inspector-dims" }, meta.width, "\xD7", meta.height) : null)), /* @__PURE__ */ React.createElement("div", { className: "inspector-tools" }, /* @__PURE__ */ React.createElement("div", { className: "channel-btns" }, CH.map((c) => /* @__PURE__ */ React.createElement(
+    /* @__PURE__ */ React.createElement("div", { className: "inspector-scrim", onMouseMove: onMove, onMouseUp: onUp, onMouseLeave: onUp }, /* @__PURE__ */ React.createElement("div", { className: "inspector-bar" }, /* @__PURE__ */ React.createElement("div", { className: "inspector-titles" }, /* @__PURE__ */ React.createElement("span", { className: "inspector-name" }, meta ? meta.name : desc.label || "Preview"), /* @__PURE__ */ React.createElement("span", { className: "inspector-sub" }, pill && /* @__PURE__ */ React.createElement("span", { className: "inspector-pill" }, pill), meta && meta.width ? /* @__PURE__ */ React.createElement("span", { className: "inspector-dims" }, meta.width, "\xD7", meta.height) : null)), /* @__PURE__ */ React.createElement("div", { className: "inspector-tools" }, items.length > 1 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { className: "inspector-nav", onClick: () => go(-1), title: "Previous texture (\u2190)" }, "\u2039"), /* @__PURE__ */ React.createElement("span", { className: "inspector-count" }, idx + 1, " / ", items.length), /* @__PURE__ */ React.createElement("button", { className: "inspector-nav", onClick: () => go(1), title: "Next texture (\u2192)" }, "\u203A"), /* @__PURE__ */ React.createElement("span", { className: "inspector-divider" })), /* @__PURE__ */ React.createElement("div", { className: "channel-btns" }, CH.map((c) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: c,

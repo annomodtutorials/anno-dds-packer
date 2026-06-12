@@ -346,7 +346,9 @@ function channelSemantics(desc) {
 // Full-screen inspector with pan/zoom + per-channel isolation. Controlled by
 // App via window.__openInspector. The image is drawn to a <canvas> so R/G/B/A
 // isolation happens client-side (instant, no extra fetch).
-function ImageInspector({ desc, onClose }) {
+function ImageInspector({ items, start, onClose }) {
+  const [idx, setIdx] = useState(start || 0);
+  const desc = items[idx] || items[0];
   const [meta, setMeta] = useState(null);
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
@@ -358,6 +360,7 @@ function ImageInspector({ desc, onClose }) {
   const canvasRef = useRef(null);
   const drag = useRef(null);
   const sem = channelSemantics(desc);
+  const go = (delta) => setIdx(i => (i + delta + items.length) % items.length);
 
   useEffect(() => {
     if (window.pywebview && window.pywebview.api) {
@@ -373,6 +376,7 @@ function ImageInspector({ desc, onClose }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true); setBase(null); setChannel('RGBA');
+    setScale(1); setTx(0); setTy(0);   // reframe each texture on navigation
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
@@ -428,6 +432,8 @@ function ImageInspector({ desc, onClose }) {
       else if (e.key === '0') { setScale(1); setTx(0); setTy(0); }
       else if (e.key === '+' || e.key === '=') setScale(s => Math.min(16, s * 1.25));
       else if (e.key === '-' || e.key === '_') setScale(s => Math.max(0.1, s / 1.25));
+      else if (e.key === 'ArrowRight') { e.preventDefault(); setIdx(i => (i + 1) % items.length); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); setIdx(i => (i - 1 + items.length) % items.length); }
       else if (canChannels && 'rR'.includes(e.key)) setChannel('R');
       else if (canChannels && 'gG'.includes(e.key)) setChannel('G');
       else if (canChannels && 'bB'.includes(e.key)) setChannel('B');
@@ -435,7 +441,7 @@ function ImageInspector({ desc, onClose }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, canChannels]);
+  }, [onClose, canChannels, items.length]);
 
   const onWheel = (e) => {
     e.preventDefault();
@@ -485,6 +491,14 @@ function ImageInspector({ desc, onClose }) {
           </span>
         </div>
         <div className="inspector-tools">
+          {items.length > 1 && (
+            <>
+              <button className="inspector-nav" onClick={() => go(-1)} title="Previous texture (←)">‹</button>
+              <span className="inspector-count">{idx + 1} / {items.length}</span>
+              <button className="inspector-nav" onClick={() => go(1)} title="Next texture (→)">›</button>
+              <span className="inspector-divider" />
+            </>
+          )}
           <div className="channel-btns">
             {CH.map(c => (
               <button key={c}

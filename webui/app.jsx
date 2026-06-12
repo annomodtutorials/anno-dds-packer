@@ -319,6 +319,38 @@ async function waitForApi(timeoutMs = 15000) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Ordered list of every previewable chip across the queue, in visual reading
+// order (per row: inputs then outputs). Mirrors the chips the theme rows render
+// so the inspector's prev/next walks exactly what's on screen.
+function buildPreviewList(rows, unpackMode) {
+  const out = [];
+  for (const row of rows) {
+    if (unpackMode) {
+      for (const mt of (row.input_dds_types || [])) {
+        out.push({ mode: 'unpack', kind: 'input', set_id: row.set_id, map_type: mt,
+                   label: (window.DDS_LABEL && window.DDS_LABEL[mt]) || `${mt.toUpperCase()}.DDS` });
+      }
+      const done = new Set(row.maps_done || []);
+      const outs = row.status === 'done'
+        ? (row.output_png_types || []).filter(pt => done.has(pt))
+        : (row.output_png_types || []);
+      for (const pt of outs) {
+        out.push({ mode: 'unpack', kind: 'output', set_id: row.set_id, map_type: pt,
+                   label: (window.PNG_OUTPUT_LABEL && window.PNG_OUTPUT_LABEL[pt]) || `${pt.toUpperCase()}.PNG` });
+      }
+    } else {
+      for (const c of (window.maybeInputChips ? window.maybeInputChips(row.input_map_types) : [])) {
+        out.push({ mode: 'pack', kind: 'input', set_id: row.set_id, map_type: c.type, label: c.label });
+      }
+      for (const mt of (row.output_map_types || ['diff', 'norm', 'metal'])) {
+        out.push({ mode: 'pack', kind: 'output', set_id: row.set_id, map_type: mt, lod: 0,
+                   label: (window.DDS_LABEL && window.DDS_LABEL[mt]) || `${mt.toUpperCase()}.DDS` });
+      }
+    }
+  }
+  return out;
+}
+
 function App() {
   const [ready, setReady] = useState(false);
   const [theme, setTheme] = useState('anno');
@@ -599,14 +631,26 @@ function App() {
     window.__onBatchDone = async () => {
       setMode('idle');
     };
-    window.__openInspector = (desc) => setInspector(desc);
     return () => {
       delete window.__onFilesDropped;
       delete window.__updateProgress;
       delete window.__onBatchDone;
-      delete window.__openInspector;
     };
   }, []);
+
+  // Inspector opener — recreated when the queue changes so it always snapshots
+  // the current set of previewable chips and opens at the clicked one.
+  useEffect(() => {
+    window.__openInspector = (desc) => {
+      const items = buildPreviewList(queueRows, unpackMode);
+      let index = items.findIndex(d =>
+        d.mode === desc.mode && d.kind === desc.kind &&
+        d.set_id === desc.set_id && d.map_type === desc.map_type);
+      if (index < 0) { items.push(desc); index = items.length - 1; }
+      setInspector({ items, index });
+    };
+    return () => { if (window.__openInspector) delete window.__openInspector; };
+  }, [queueRows, unpackMode]);
 
   // — Mode switch: clears queue and switches pack ↔ unpack —
   const handleModeSwitch = async (toUnpack) => {
@@ -783,7 +827,8 @@ function App() {
         </div>
       </div>
       {inspector && (
-        <ImageInspector desc={inspector} onClose={() => setInspector(null)} />
+        <ImageInspector items={inspector.items} start={inspector.index}
+                        onClose={() => setInspector(null)} />
       )}
     </div>
   );
