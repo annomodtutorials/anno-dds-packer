@@ -2092,14 +2092,61 @@ html[data-theme="modern"] .inspector-bar { border-bottom-color: rgba(152, 147, 2
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 html[data-theme="modern"] .inspector-name { color: #cfd2e6; }
-.inspector-type {
-  font: 500 11px/1.2 'Inter', system-ui, sans-serif;
-  letter-spacing: 0.05em;
+.inspector-sub { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+.inspector-pill {
+  font: 600 10px/1 'Inter', system-ui, sans-serif;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(201, 161, 82, 0.85);
+  color: #c9a152;
+  background: rgba(201, 161, 82, 0.14);
+  border: 1px solid rgba(201, 161, 82, 0.35);
+  border-radius: 999px;
+  padding: 4px 10px;
 }
-html[data-theme="modern"] .inspector-type { color: rgba(152, 147, 252, 0.9); }
+html[data-theme="modern"] .inspector-pill {
+  color: #9893fc;
+  background: rgba(152, 147, 252, 0.14);
+  border-color: rgba(152, 147, 252, 0.35);
+}
+.inspector-dims {
+  font: 500 11px/1 'JetBrains Mono', monospace;
+  color: rgba(255, 255, 255, 0.5);
+}
 .inspector-tools { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* Channel isolation buttons (R G B A | RGBA) */
+.channel-btns { display: flex; align-items: center; gap: 3px; }
+.channel-btn {
+  min-width: 30px; height: 30px; padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.6);
+  border-radius: 6px; cursor: pointer;
+  font: 700 12px/1 'JetBrains Mono', monospace;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.channel-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.channel-btn:disabled { opacity: 0.3; cursor: default; }
+.channel-btn.rgba, .channel-btn.ch-RGBA { min-width: 46px; }
+/* Tint each channel button by its colour when active */
+.channel-btn.ch-R.active { background: rgba(232, 76, 76, 0.85); border-color: rgba(232,76,76,0.9); color: #fff; }
+.channel-btn.ch-G.active { background: rgba(76, 196, 100, 0.85); border-color: rgba(76,196,100,0.9); color: #fff; }
+.channel-btn.ch-B.active { background: rgba(76, 130, 232, 0.9); border-color: rgba(76,130,232,0.95); color: #fff; }
+.channel-btn.ch-A.active { background: rgba(220, 220, 220, 0.9); border-color: #fff; color: #111; }
+.channel-btn.ch-RGBA.active {
+  background: rgba(201, 161, 82, 0.85); border-color: #c9a152; color: #1a1206;
+}
+html[data-theme="modern"] .channel-btn.ch-RGBA.active {
+  background: rgba(152, 147, 252, 0.9); border-color: #9893fc; color: #fff;
+}
+.inspector-divider { width: 1px; height: 24px; background: rgba(255, 255, 255, 0.15); margin: 0 2px; }
+.inspector-loading {
+  position: absolute;
+  font: 500 13px/1 'Inter', system-ui, sans-serif;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.04em;
+}
 .inspector-tools button {
   min-width: 30px; height: 30px; padding: 0 9px;
   border: 1px solid rgba(201, 161, 82, 0.3);

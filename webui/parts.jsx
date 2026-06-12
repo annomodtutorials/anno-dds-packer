@@ -302,13 +302,43 @@ function ChipPreview({ desc, children, className, style, as }) {
   );
 }
 
-// Full-screen pan/zoom inspector. Controlled by App via window.__openInspector.
+// What each channel means for the Anno-packed DDS types (and the live pack
+// output, which IS that DDS). Drives the semantic pill in the inspector.
+const ANNO_DDS_SEM = {
+  diff:   { all: 'Diffuse',        R: 'Albedo (R)', G: 'Albedo (G)', B: 'Albedo (B)', A: 'Opacity' },
+  norm:   { all: 'Normal',         R: 'Normal X',   G: 'Normal Y (DX)', B: 'Normal Z', A: 'Glossiness' },
+  metal:  { all: 'Metal (packed)', R: 'Metalness',  G: 'Metalness',  B: 'Metalness',  A: 'Ambient Occlusion' },
+  height: { all: 'Height',         R: 'Displacement', G: 'Displacement', B: 'Displacement', A: '—' },
+  mask:   { all: 'Mask',           R: 'Emission (R)', G: 'Emission (G)', B: 'Emission (B)', A: 'Night mask' },
+  icon:   { all: 'Icon',           R: 'Red', G: 'Green', B: 'Blue', A: 'Mask' },
+};
+
+// Return {all, R, G, B, A} semantic labels for the texture in `desc`.
+function channelSemantics(desc) {
+  const ddsLike =
+    (desc.mode === 'unpack' && desc.kind === 'input') ||
+    (desc.mode === 'pack' && desc.kind === 'output');
+  if (ddsLike && ANNO_DDS_SEM[desc.map_type]) return ANNO_DDS_SEM[desc.map_type];
+  // Plain single-purpose maps (pack inputs, unpack-output channels): the label
+  // applies to the whole image; channels are just colour planes.
+  return { all: desc.label || '', R: 'Red', G: 'Green', B: 'Blue', A: 'Alpha' };
+}
+
+// Full-screen inspector with pan/zoom + per-channel isolation. Controlled by
+// App via window.__openInspector. The image is drawn to a <canvas> so R/G/B/A
+// isolation happens client-side (instant, no extra fetch).
 function ImageInspector({ desc, onClose }) {
   const [meta, setMeta] = useState(null);
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
+  const [channel, setChannel] = useState('RGBA');
+  const [base, setBase] = useState(null);     // {data:ImageData, w, h} | {img, w, h, tainted} | null
+  const [canChannels, setCanChannels] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const canvasRef = useRef(null);
   const drag = useRef(null);
+  const sem = channelSemantics(desc);
 
   useEffect(() => {
     if (window.pywebview && window.pywebview.api) {
@@ -319,16 +349,66 @@ function ImageInspector({ desc, onClose }) {
     }
   }, [desc]);
 
+  // Load the image and grab its pixels (crossOrigin so the canvas isn't tainted
+  // — the server sends Access-Control-Allow-Origin: *).
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true); setBase(null); setChannel('RGBA');
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      if (cancelled) return;
+      const oc = document.createElement('canvas');
+      oc.width = img.naturalWidth; oc.height = img.naturalHeight;
+      const octx = oc.getContext('2d');
+      octx.drawImage(img, 0, 0);
+      try {
+        const data = octx.getImageData(0, 0, oc.width, oc.height);
+        setBase({ data, w: oc.width, h: oc.height });
+        setCanChannels(true);
+      } catch (e) {
+        setBase({ img, w: img.naturalWidth, h: img.naturalHeight, tainted: true });
+        setCanChannels(false);
+      }
+      setLoading(false);
+    };
+    img.onerror = () => { if (!cancelled) setLoading(false); };
+    img.src = previewUrl(desc, 1600);
+    return () => { cancelled = true; };
+  }, [desc]);
+
+  // Draw the selected channel to the visible canvas.
+  useEffect(() => {
+    const cv = canvasRef.current;
+    if (!cv || !base) return;
+    cv.width = base.w; cv.height = base.h;
+    const ctx = cv.getContext('2d');
+    if (base.tainted) { ctx.drawImage(base.img, 0, 0); return; }
+    if (channel === 'RGBA') { ctx.putImageData(base.data, 0, 0); return; }
+    const off = channel === 'R' ? 0 : channel === 'G' ? 1 : channel === 'B' ? 2 : 3;
+    const out = ctx.createImageData(base.w, base.h);
+    const s = base.data.data, d = out.data;
+    for (let i = 0; i < s.length; i += 4) {
+      const v = s[i + off];
+      d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
+    }
+    ctx.putImageData(out, 0, 0);
+  }, [base, channel]);
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') onClose();
       else if (e.key === '0') { setScale(1); setTx(0); setTy(0); }
       else if (e.key === '+' || e.key === '=') setScale(s => Math.min(16, s * 1.25));
       else if (e.key === '-' || e.key === '_') setScale(s => Math.max(0.1, s / 1.25));
+      else if (canChannels && 'rR'.includes(e.key)) setChannel('R');
+      else if (canChannels && 'gG'.includes(e.key)) setChannel('G');
+      else if (canChannels && 'bB'.includes(e.key)) setChannel('B');
+      else if (canChannels && 'aA'.includes(e.key)) setChannel('A');
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, canChannels]);
 
   const onWheel = (e) => {
     e.preventDefault();
@@ -353,25 +433,37 @@ function ImageInspector({ desc, onClose }) {
   const onUp = () => {
     const d = drag.current;
     drag.current = null;
-    // Close only on a clean (non-drag) click on the empty backdrop — never when
-    // clicking/dragging the image itself.
     if (d && !d.moved && !d.onImage) onClose();
   };
   const reset = () => { setScale(1); setTx(0); setTy(0); };
+
+  const pill = channel === 'RGBA' ? (sem.all || 'RGBA') : sem[channel];
+  const CH = ['R', 'G', 'B', 'A', 'RGBA'];
 
   return ReactDOM.createPortal(
     <div className="inspector-scrim" onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}>
       <div className="inspector-bar">
         <div className="inspector-titles">
           <span className="inspector-name">{meta ? meta.name : (desc.label || 'Preview')}</span>
-          <span className="inspector-type">
-            {desc.label || ''}{meta && meta.width ? `  ·  ${meta.width}×${meta.height}` : ''}
+          <span className="inspector-sub">
+            {pill && <span className="inspector-pill">{pill}</span>}
+            {meta && meta.width ? <span className="inspector-dims">{meta.width}×{meta.height}</span> : null}
           </span>
         </div>
         <div className="inspector-tools">
-          <button onClick={() => setScale(s => Math.max(0.1, s / 1.25))} title="Zoom out">−</button>
+          <div className="channel-btns">
+            {CH.map(c => (
+              <button key={c}
+                className={'channel-btn ch-' + c + (channel === c ? ' active' : '')}
+                disabled={!canChannels && c !== 'RGBA'}
+                title={c === 'RGBA' ? 'Full colour (original)' : `Isolate ${c} channel — ${sem[c]}`}
+                onClick={() => setChannel(c)}>{c}</button>
+            ))}
+          </div>
+          <span className="inspector-divider" />
+          <button onClick={() => setScale(s => Math.max(0.1, s / 1.25))} title="Zoom out (−)">−</button>
           <span className="inspector-zoom">{Math.round(scale * 100)}%</span>
-          <button onClick={() => setScale(s => Math.min(16, s * 1.25))} title="Zoom in">+</button>
+          <button onClick={() => setScale(s => Math.min(16, s * 1.25))} title="Zoom in (+)">+</button>
           <button onClick={reset} title="Reset (0)">Fit</button>
           <button className="inspector-close" onClick={onClose} title="Close (Esc)">✕</button>
         </div>
@@ -379,11 +471,10 @@ function ImageInspector({ desc, onClose }) {
       <div className="inspector-stage checker"
            onWheel={onWheel} onMouseDown={onDown}
            style={{ cursor: 'grab' }}>
-        <img className="inspector-img"
-             src={previewUrl(desc, 1600)}
-             alt=""
-             draggable={false}
-             style={{ transform: `translate(${tx}px, ${ty}px) scale(${scale})` }} />
+        {loading && <div className="inspector-loading">Loading…</div>}
+        <canvas ref={canvasRef} className="inspector-img"
+                style={{ transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
+                         visibility: base ? 'visible' : 'hidden' }} />
       </div>
     </div>,
     document.body

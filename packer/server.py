@@ -819,9 +819,13 @@ def preview(mode: str, kind: str, set_id: int, map_type: str,
         img = None
     if img is None:
         return Response(status_code=404)
+    # Cacheable: the URL carries a nonce (window.__previewNonce) that the
+    # frontend bumps whenever the queue changes, so a given URL always maps to
+    # fixed content. This makes re-hovering a previously-seen image instant
+    # (served from the webview's memory cache, no refetch / re-encode).
     return Response(content=_png_response_bytes(img, maxdim),
                     media_type="image/png",
-                    headers={"Cache-Control": "no-store"})
+                    headers={"Cache-Control": "public, max-age=3600"})
 
 
 @app.post("/api/preview_meta")

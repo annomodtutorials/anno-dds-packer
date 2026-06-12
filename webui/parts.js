@@ -229,12 +229,31 @@ function ChipPreview({ desc, children, className, style, as }) {
     )
   );
 }
+const ANNO_DDS_SEM = {
+  diff: { all: "Diffuse", R: "Albedo (R)", G: "Albedo (G)", B: "Albedo (B)", A: "Opacity" },
+  norm: { all: "Normal", R: "Normal X", G: "Normal Y (DX)", B: "Normal Z", A: "Glossiness" },
+  metal: { all: "Metal (packed)", R: "Metalness", G: "Metalness", B: "Metalness", A: "Ambient Occlusion" },
+  height: { all: "Height", R: "Displacement", G: "Displacement", B: "Displacement", A: "\u2014" },
+  mask: { all: "Mask", R: "Emission (R)", G: "Emission (G)", B: "Emission (B)", A: "Night mask" },
+  icon: { all: "Icon", R: "Red", G: "Green", B: "Blue", A: "Mask" }
+};
+function channelSemantics(desc) {
+  const ddsLike = desc.mode === "unpack" && desc.kind === "input" || desc.mode === "pack" && desc.kind === "output";
+  if (ddsLike && ANNO_DDS_SEM[desc.map_type]) return ANNO_DDS_SEM[desc.map_type];
+  return { all: desc.label || "", R: "Red", G: "Green", B: "Blue", A: "Alpha" };
+}
 function ImageInspector({ desc, onClose }) {
   const [meta, setMeta] = useState(null);
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
+  const [channel, setChannel] = useState("RGBA");
+  const [base, setBase] = useState(null);
+  const [canChannels, setCanChannels] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const canvasRef = useRef(null);
   const drag = useRef(null);
+  const sem = channelSemantics(desc);
   useEffect(() => {
     if (window.pywebview && window.pywebview.api) {
       window.pywebview.api.preview_meta({
@@ -250,6 +269,64 @@ function ImageInspector({ desc, onClose }) {
     }
   }, [desc]);
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setBase(null);
+    setChannel("RGBA");
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      if (cancelled) return;
+      const oc = document.createElement("canvas");
+      oc.width = img.naturalWidth;
+      oc.height = img.naturalHeight;
+      const octx = oc.getContext("2d");
+      octx.drawImage(img, 0, 0);
+      try {
+        const data = octx.getImageData(0, 0, oc.width, oc.height);
+        setBase({ data, w: oc.width, h: oc.height });
+        setCanChannels(true);
+      } catch (e) {
+        setBase({ img, w: img.naturalWidth, h: img.naturalHeight, tainted: true });
+        setCanChannels(false);
+      }
+      setLoading(false);
+    };
+    img.onerror = () => {
+      if (!cancelled) setLoading(false);
+    };
+    img.src = previewUrl(desc, 1600);
+    return () => {
+      cancelled = true;
+    };
+  }, [desc]);
+  useEffect(() => {
+    const cv = canvasRef.current;
+    if (!cv || !base) return;
+    cv.width = base.w;
+    cv.height = base.h;
+    const ctx = cv.getContext("2d");
+    if (base.tainted) {
+      ctx.drawImage(base.img, 0, 0);
+      return;
+    }
+    if (channel === "RGBA") {
+      ctx.putImageData(base.data, 0, 0);
+      return;
+    }
+    const off = channel === "R" ? 0 : channel === "G" ? 1 : channel === "B" ? 2 : 3;
+    const out = ctx.createImageData(base.w, base.h);
+    const s = base.data.data, d = out.data;
+    for (let i = 0; i < s.length; i += 4) {
+      const v = s[i + off];
+      d[i] = v;
+      d[i + 1] = v;
+      d[i + 2] = v;
+      d[i + 3] = 255;
+    }
+    ctx.putImageData(out, 0, 0);
+  }, [base, channel]);
+  useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") onClose();
       else if (e.key === "0") {
@@ -258,10 +335,14 @@ function ImageInspector({ desc, onClose }) {
         setTy(0);
       } else if (e.key === "+" || e.key === "=") setScale((s) => Math.min(16, s * 1.25));
       else if (e.key === "-" || e.key === "_") setScale((s) => Math.max(0.1, s / 1.25));
+      else if (canChannels && "rR".includes(e.key)) setChannel("R");
+      else if (canChannels && "gG".includes(e.key)) setChannel("G");
+      else if (canChannels && "bB".includes(e.key)) setChannel("B");
+      else if (canChannels && "aA".includes(e.key)) setChannel("A");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, canChannels]);
   const onWheel = (e) => {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
@@ -295,8 +376,20 @@ function ImageInspector({ desc, onClose }) {
     setTx(0);
     setTy(0);
   };
+  const pill = channel === "RGBA" ? sem.all || "RGBA" : sem[channel];
+  const CH = ["R", "G", "B", "A", "RGBA"];
   return ReactDOM.createPortal(
-    /* @__PURE__ */ React.createElement("div", { className: "inspector-scrim", onMouseMove: onMove, onMouseUp: onUp, onMouseLeave: onUp }, /* @__PURE__ */ React.createElement("div", { className: "inspector-bar" }, /* @__PURE__ */ React.createElement("div", { className: "inspector-titles" }, /* @__PURE__ */ React.createElement("span", { className: "inspector-name" }, meta ? meta.name : desc.label || "Preview"), /* @__PURE__ */ React.createElement("span", { className: "inspector-type" }, desc.label || "", meta && meta.width ? `  \xB7  ${meta.width}\xD7${meta.height}` : "")), /* @__PURE__ */ React.createElement("div", { className: "inspector-tools" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScale((s) => Math.max(0.1, s / 1.25)), title: "Zoom out" }, "\u2212"), /* @__PURE__ */ React.createElement("span", { className: "inspector-zoom" }, Math.round(scale * 100), "%"), /* @__PURE__ */ React.createElement("button", { onClick: () => setScale((s) => Math.min(16, s * 1.25)), title: "Zoom in" }, "+"), /* @__PURE__ */ React.createElement("button", { onClick: reset, title: "Reset (0)" }, "Fit"), /* @__PURE__ */ React.createElement("button", { className: "inspector-close", onClick: onClose, title: "Close (Esc)" }, "\u2715"))), /* @__PURE__ */ React.createElement(
+    /* @__PURE__ */ React.createElement("div", { className: "inspector-scrim", onMouseMove: onMove, onMouseUp: onUp, onMouseLeave: onUp }, /* @__PURE__ */ React.createElement("div", { className: "inspector-bar" }, /* @__PURE__ */ React.createElement("div", { className: "inspector-titles" }, /* @__PURE__ */ React.createElement("span", { className: "inspector-name" }, meta ? meta.name : desc.label || "Preview"), /* @__PURE__ */ React.createElement("span", { className: "inspector-sub" }, pill && /* @__PURE__ */ React.createElement("span", { className: "inspector-pill" }, pill), meta && meta.width ? /* @__PURE__ */ React.createElement("span", { className: "inspector-dims" }, meta.width, "\xD7", meta.height) : null)), /* @__PURE__ */ React.createElement("div", { className: "inspector-tools" }, /* @__PURE__ */ React.createElement("div", { className: "channel-btns" }, CH.map((c) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: c,
+        className: "channel-btn ch-" + c + (channel === c ? " active" : ""),
+        disabled: !canChannels && c !== "RGBA",
+        title: c === "RGBA" ? "Full colour (original)" : `Isolate ${c} channel \u2014 ${sem[c]}`,
+        onClick: () => setChannel(c)
+      },
+      c
+    ))), /* @__PURE__ */ React.createElement("span", { className: "inspector-divider" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setScale((s) => Math.max(0.1, s / 1.25)), title: "Zoom out (\u2212)" }, "\u2212"), /* @__PURE__ */ React.createElement("span", { className: "inspector-zoom" }, Math.round(scale * 100), "%"), /* @__PURE__ */ React.createElement("button", { onClick: () => setScale((s) => Math.min(16, s * 1.25)), title: "Zoom in (+)" }, "+"), /* @__PURE__ */ React.createElement("button", { onClick: reset, title: "Reset (0)" }, "Fit"), /* @__PURE__ */ React.createElement("button", { className: "inspector-close", onClick: onClose, title: "Close (Esc)" }, "\u2715"))), /* @__PURE__ */ React.createElement(
       "div",
       {
         className: "inspector-stage checker",
@@ -304,14 +397,16 @@ function ImageInspector({ desc, onClose }) {
         onMouseDown: onDown,
         style: { cursor: "grab" }
       },
+      loading && /* @__PURE__ */ React.createElement("div", { className: "inspector-loading" }, "Loading\u2026"),
       /* @__PURE__ */ React.createElement(
-        "img",
+        "canvas",
         {
+          ref: canvasRef,
           className: "inspector-img",
-          src: previewUrl(desc, 1600),
-          alt: "",
-          draggable: false,
-          style: { transform: `translate(${tx}px, ${ty}px) scale(${scale})` }
+          style: {
+            transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
+            visibility: base ? "visible" : "hidden"
+          }
         }
       )
     )),
