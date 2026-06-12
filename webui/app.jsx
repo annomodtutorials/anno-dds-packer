@@ -340,6 +340,16 @@ function App() {
   const unpackModeRef = useRef(false);
   useEffect(() => { unpackModeRef.current = unpackMode; }, [unpackMode]);
 
+  // Preview cache-buster: set_id restarts at 0 after the queue is cleared, so a
+  // freshly-added set would reuse the previous set's preview URL and the browser
+  // would serve the stale cached image. Every clear path sets queueRows to [],
+  // so bumping the nonce on each empty transition guarantees fresh preview URLs.
+  useEffect(() => {
+    if (queueRows.length === 0) {
+      window.__previewNonce = (window.__previewNonce || 0) + 1;
+    }
+  }, [queueRows.length]);
+
   // — Load settings from Python on mount —
   useEffect(() => {
     (async () => {

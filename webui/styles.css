@@ -2030,7 +2030,7 @@ html[data-theme="modern"] .preview-pop {
 }
 .preview-pop-img {
   width: 100%;
-  height: 200px;
+  /* height is set inline to match the texture's aspect ratio */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2142,6 +2142,6 @@ html[data-theme="modern"] .inspector-tools button:hover { background: rgba(152, 
   transform-origin: center center;
   will-change: transform;
   image-rendering: pixelated;       /* crisp at high zoom for texel inspection */
-  pointer-events: none;
+  pointer-events: auto;             /* so clicks on the image don't read as a backdrop click */
 }
 

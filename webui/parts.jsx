@@ -183,12 +183,16 @@ function previewBase() {
 }
 
 // Build a GET URL the webview can use directly as an <img src>.
+// `n` is a cache-buster: set_id is reused after the queue is cleared, so the
+// browser would otherwise serve the previous set's cached image at the same
+// URL. App bumps window.__previewNonce whenever the queue empties.
 function previewUrl(desc, maxdim) {
   const p = new URLSearchParams({
     mode: desc.mode, kind: desc.kind,
     set_id: String(desc.set_id), map_type: desc.map_type,
     lod: String(desc.lod != null ? desc.lod : -1),
     maxdim: String(maxdim || 0),
+    n: String(window.__previewNonce || 0),
   });
   return `${previewBase()}/api/preview?${p.toString()}`;
 }
@@ -196,43 +200,66 @@ function previewUrl(desc, maxdim) {
 // A wrapper that shows a hover popover (thumbnail + filename + type) and opens
 // the full-screen inspector on click. `desc` = {mode, kind, set_id, map_type,
 // lod, label}.
+// Popover sizing — image box fits within MAXW×MAXH preserving the texture's
+// real aspect ratio (~50% larger than the original 240×200 frame).
+const POP_MAXW = 340, POP_MAXH = 300, POP_CAP = 52, POP_GAP = 12;
+
+function popImgDims(meta) {
+  if (meta && meta.width && meta.height) {
+    const aspect = meta.width / meta.height;
+    let w = POP_MAXW, h = w / aspect;
+    if (h > POP_MAXH) { h = POP_MAXH; w = h * aspect; }
+    return { w: Math.round(w), h: Math.round(h) };
+  }
+  const s = Math.min(POP_MAXW, POP_MAXH);   // square default until meta loads
+  return { w: s, h: s };
+}
+
 function ChipPreview({ desc, children, className, style, as }) {
   const Tag = as || 'span';
   const [hover, setHover] = useState(false);
-  const [pos, setPos] = useState(null);        // {left, top, placement}
+  const [box, setBox] = useState(null);        // {left, top, w, h}
   const [meta, setMeta] = useState(null);      // {name, type_label, width, height}
   const [failed, setFailed] = useState(false);
   const elRef = useRef(null);
   const timerRef = useRef(null);
 
-  const computePos = () => {
+  // Place the popover where there's the most room (below preferred), sized to
+  // the image's aspect ratio.
+  const place = (m) => {
     const el = elRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const PW = 240, PH = 280, GAP = 12;
-    let placement = 'above';
-    let top = r.top - GAP - PH;
-    if (top < 8) { placement = 'below'; top = r.bottom + GAP; }
-    let left = r.left + r.width / 2 - PW / 2;
-    left = Math.max(8, Math.min(left, window.innerWidth - PW - 8));
-    setPos({ left, top, width: PW, placement });
+    const d = popImgDims(m);
+    const popH = d.h + POP_CAP;
+    const spaceBelow = window.innerHeight - r.bottom;
+    const spaceAbove = r.top;
+    let top;
+    if (spaceBelow >= popH + POP_GAP || spaceBelow >= spaceAbove) {
+      top = r.bottom + POP_GAP;             // below the chip
+    } else {
+      top = r.top - POP_GAP - popH;         // above the chip
+    }
+    top = Math.max(8, Math.min(top, window.innerHeight - popH - 8));
+    let left = r.left + r.width / 2 - d.w / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - d.w - 8));
+    setBox({ left, top, w: d.w, h: d.h });
   };
 
   const onEnter = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      computePos();
-      setHover(true);
       setFailed(false);
       setMeta(null);
-      // fetch filename / dims for the popover caption
+      place(null);
+      setHover(true);
       if (window.pywebview && window.pywebview.api) {
         window.pywebview.api.preview_meta({
           mode: desc.mode, kind: desc.kind, set_id: desc.set_id,
           map_type: desc.map_type, lod: desc.lod != null ? desc.lod : -1,
-        }).then(m => { if (m && m.ok) setMeta(m); }).catch(() => {});
+        }).then(m => { if (m && m.ok) { setMeta(m); place(m); } }).catch(() => {});
       }
-    }, 140);
+    }, 130);
   };
   const onLeave = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -255,10 +282,10 @@ function ChipPreview({ desc, children, className, style, as }) {
       onClick={onClick}
     >
       {children}
-      {hover && pos && !failed && ReactDOM.createPortal(
-        <div className="preview-pop" style={{ left: pos.left, top: pos.top, width: pos.width }}>
-          <div className="preview-pop-img checker">
-            <img src={previewUrl(desc, 320)} alt=""
+      {hover && box && !failed && ReactDOM.createPortal(
+        <div className="preview-pop" style={{ left: box.left, top: box.top, width: box.w }}>
+          <div className="preview-pop-img checker" style={{ height: box.h }}>
+            <img src={previewUrl(desc, 512)} alt=""
                  onError={() => setFailed(true)} />
           </div>
           <div className="preview-pop-cap">
@@ -309,14 +336,27 @@ function ImageInspector({ desc, onClose }) {
     setScale(s => Math.max(0.1, Math.min(16, s * factor)));
   };
   const onDown = (e) => {
-    drag.current = { x: e.clientX, y: e.clientY, tx, ty };
+    drag.current = {
+      x: e.clientX, y: e.clientY, tx, ty,
+      moved: false,
+      onImage: e.target && e.target.classList && e.target.classList.contains('inspector-img'),
+    };
   };
   const onMove = (e) => {
     if (!drag.current) return;
+    if (Math.abs(e.clientX - drag.current.x) + Math.abs(e.clientY - drag.current.y) > 3) {
+      drag.current.moved = true;
+    }
     setTx(drag.current.tx + (e.clientX - drag.current.x));
     setTy(drag.current.ty + (e.clientY - drag.current.y));
   };
-  const onUp = () => { drag.current = null; };
+  const onUp = () => {
+    const d = drag.current;
+    drag.current = null;
+    // Close only on a clean (non-drag) click on the empty backdrop — never when
+    // clicking/dragging the image itself.
+    if (d && !d.moved && !d.onImage) onClose();
+  };
   const reset = () => { setScale(1); setTx(0); setTy(0); };
 
   return ReactDOM.createPortal(
@@ -338,8 +378,7 @@ function ImageInspector({ desc, onClose }) {
       </div>
       <div className="inspector-stage checker"
            onWheel={onWheel} onMouseDown={onDown}
-           style={{ cursor: drag.current ? 'grabbing' : 'grab' }}
-           onClick={(e) => { if (e.target.classList.contains('inspector-stage')) onClose(); }}>
+           style={{ cursor: 'grab' }}>
         <img className="inspector-img"
              src={previewUrl(desc, 1600)}
              alt=""
