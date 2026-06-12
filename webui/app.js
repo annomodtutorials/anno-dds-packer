@@ -126,6 +126,7 @@ function App() {
   const [errorModal, setErrorModal] = useState(null);
   const [unpackMode, setUnpackMode] = useState(false);
   const [overwritePending, setOverwritePending] = useState(null);
+  const [inspector, setInspector] = useState(null);
   const unpackModeRef = useRef(false);
   useEffect(() => {
     unpackModeRef.current = unpackMode;
@@ -351,10 +352,12 @@ function App() {
     window.__onBatchDone = async () => {
       setMode("idle");
     };
+    window.__openInspector = (desc) => setInspector(desc);
     return () => {
       delete window.__onFilesDropped;
       delete window.__updateProgress;
       delete window.__onBatchDone;
+      delete window.__openInspector;
     };
   }, []);
   const handleModeSwitch = async (toUnpack) => {
@@ -512,7 +515,7 @@ function App() {
       text: errorModal.text,
       onClose: () => setErrorModal(null)
     }
-  ))));
+  ))), inspector && /* @__PURE__ */ React.createElement(ImageInspector, { desc: inspector, onClose: () => setInspector(null) }));
 }
 function OverwriteDialog({ count, examples, onOverwrite, onCancel }) {
   return /* @__PURE__ */ React.createElement("div", { className: "scrim", onClick: onCancel }, /* @__PURE__ */ React.createElement("div", { className: "help-dialog", style: { width: 460, maxHeight: "none" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("div", { className: "help-title-row" }, /* @__PURE__ */ React.createElement("div", { className: "help-title" }, "Overwrite Existing Files?"), /* @__PURE__ */ React.createElement("button", { className: "help-close", onClick: onCancel }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "help-body", style: { padding: "20px 24px 8px" } }, /* @__PURE__ */ React.createElement("p", { style: { margin: "0 0 12px", lineHeight: 1.6 } }, /* @__PURE__ */ React.createElement("strong", null, count), " output file", count !== 1 ? "s" : "", " already exist in the output folder. Do you want to overwrite ", count !== 1 ? "them" : "it", "?"), examples && examples.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 3, marginTop: 4 } }, examples.map((f) => /* @__PURE__ */ React.createElement("span", { key: f, className: "code", style: { fontSize: 11, opacity: 0.7 } }, f)), count > examples.length && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, opacity: 0.5 } }, "\u2026and ", count - examples.length, " more"))), /* @__PURE__ */ React.createElement("div", { className: "help-actions", style: { gap: 10 } }, /* @__PURE__ */ React.createElement("button", { className: "btn-ghost", onClick: onCancel, style: { flex: 1 } }, "Cancel"), /* @__PURE__ */ React.createElement("button", { className: "btn-got-it", onClick: onOverwrite, style: { flex: 1 } }, "Overwrite"))));

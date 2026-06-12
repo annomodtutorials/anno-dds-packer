@@ -169,6 +169,193 @@ function LodChip({ n, on, locked, theme, onToggle }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Image preview + full-screen inspector
+//
+// The whole app stage is rendered inside a CSS `transform: scale(...)`, which
+// would shrink any popover/overlay placed inside it. So both the hover popover
+// and the inspector are portalled to document.body and positioned in screen
+// coordinates (chip.getBoundingClientRect() already returns post-transform
+// screen pixels).
+
+function previewBase() {
+  return window.__PACKER_BASE || 'http://127.0.0.1:45291';
+}
+
+// Build a GET URL the webview can use directly as an <img src>.
+function previewUrl(desc, maxdim) {
+  const p = new URLSearchParams({
+    mode: desc.mode, kind: desc.kind,
+    set_id: String(desc.set_id), map_type: desc.map_type,
+    lod: String(desc.lod != null ? desc.lod : -1),
+    maxdim: String(maxdim || 0),
+  });
+  return `${previewBase()}/api/preview?${p.toString()}`;
+}
+
+// A wrapper that shows a hover popover (thumbnail + filename + type) and opens
+// the full-screen inspector on click. `desc` = {mode, kind, set_id, map_type,
+// lod, label}.
+function ChipPreview({ desc, children, className, style, as }) {
+  const Tag = as || 'span';
+  const [hover, setHover] = useState(false);
+  const [pos, setPos] = useState(null);        // {left, top, placement}
+  const [meta, setMeta] = useState(null);      // {name, type_label, width, height}
+  const [failed, setFailed] = useState(false);
+  const elRef = useRef(null);
+  const timerRef = useRef(null);
+
+  const computePos = () => {
+    const el = elRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const PW = 240, PH = 280, GAP = 12;
+    let placement = 'above';
+    let top = r.top - GAP - PH;
+    if (top < 8) { placement = 'below'; top = r.bottom + GAP; }
+    let left = r.left + r.width / 2 - PW / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - PW - 8));
+    setPos({ left, top, width: PW, placement });
+  };
+
+  const onEnter = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      computePos();
+      setHover(true);
+      setFailed(false);
+      setMeta(null);
+      // fetch filename / dims for the popover caption
+      if (window.pywebview && window.pywebview.api) {
+        window.pywebview.api.preview_meta({
+          mode: desc.mode, kind: desc.kind, set_id: desc.set_id,
+          map_type: desc.map_type, lod: desc.lod != null ? desc.lod : -1,
+        }).then(m => { if (m && m.ok) setMeta(m); }).catch(() => {});
+      }
+    }, 140);
+  };
+  const onLeave = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setHover(false);
+  };
+  const onClick = (e) => {
+    e.stopPropagation();
+    if (window.__openInspector) window.__openInspector(desc);
+  };
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  return (
+    <Tag
+      ref={elRef}
+      className={className}
+      style={{ cursor: 'zoom-in', ...(style || {}) }}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+      onClick={onClick}
+    >
+      {children}
+      {hover && pos && !failed && ReactDOM.createPortal(
+        <div className="preview-pop" style={{ left: pos.left, top: pos.top, width: pos.width }}>
+          <div className="preview-pop-img checker">
+            <img src={previewUrl(desc, 320)} alt=""
+                 onError={() => setFailed(true)} />
+          </div>
+          <div className="preview-pop-cap">
+            <div className="preview-pop-name">{meta ? meta.name : (desc.label || '…')}</div>
+            <div className="preview-pop-type">
+              {(desc.label || '').toString()}
+              {meta && meta.width ? `  ·  ${meta.width}×${meta.height}` : ''}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </Tag>
+  );
+}
+
+// Full-screen pan/zoom inspector. Controlled by App via window.__openInspector.
+function ImageInspector({ desc, onClose }) {
+  const [meta, setMeta] = useState(null);
+  const [scale, setScale] = useState(1);
+  const [tx, setTx] = useState(0);
+  const [ty, setTy] = useState(0);
+  const drag = useRef(null);
+
+  useEffect(() => {
+    if (window.pywebview && window.pywebview.api) {
+      window.pywebview.api.preview_meta({
+        mode: desc.mode, kind: desc.kind, set_id: desc.set_id,
+        map_type: desc.map_type, lod: desc.lod != null ? desc.lod : -1,
+      }).then(m => { if (m && m.ok) setMeta(m); }).catch(() => {});
+    }
+  }, [desc]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+      else if (e.key === '0') { setScale(1); setTx(0); setTy(0); }
+      else if (e.key === '+' || e.key === '=') setScale(s => Math.min(16, s * 1.25));
+      else if (e.key === '-' || e.key === '_') setScale(s => Math.max(0.1, s / 1.25));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const onWheel = (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    setScale(s => Math.max(0.1, Math.min(16, s * factor)));
+  };
+  const onDown = (e) => {
+    drag.current = { x: e.clientX, y: e.clientY, tx, ty };
+  };
+  const onMove = (e) => {
+    if (!drag.current) return;
+    setTx(drag.current.tx + (e.clientX - drag.current.x));
+    setTy(drag.current.ty + (e.clientY - drag.current.y));
+  };
+  const onUp = () => { drag.current = null; };
+  const reset = () => { setScale(1); setTx(0); setTy(0); };
+
+  return ReactDOM.createPortal(
+    <div className="inspector-scrim" onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}>
+      <div className="inspector-bar">
+        <div className="inspector-titles">
+          <span className="inspector-name">{meta ? meta.name : (desc.label || 'Preview')}</span>
+          <span className="inspector-type">
+            {desc.label || ''}{meta && meta.width ? `  ·  ${meta.width}×${meta.height}` : ''}
+          </span>
+        </div>
+        <div className="inspector-tools">
+          <button onClick={() => setScale(s => Math.max(0.1, s / 1.25))} title="Zoom out">−</button>
+          <span className="inspector-zoom">{Math.round(scale * 100)}%</span>
+          <button onClick={() => setScale(s => Math.min(16, s * 1.25))} title="Zoom in">+</button>
+          <button onClick={reset} title="Reset (0)">Fit</button>
+          <button className="inspector-close" onClick={onClose} title="Close (Esc)">✕</button>
+        </div>
+      </div>
+      <div className="inspector-stage checker"
+           onWheel={onWheel} onMouseDown={onDown}
+           style={{ cursor: drag.current ? 'grabbing' : 'grab' }}
+           onClick={(e) => { if (e.target.classList.contains('inspector-stage')) onClose(); }}>
+        <img className="inspector-img"
+             src={previewUrl(desc, 1600)}
+             alt=""
+             draggable={false}
+             style={{ transform: `translate(${tx}px, ${ty}px) scale(${scale})` }} />
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+window.previewBase = previewBase;
+window.previewUrl = previewUrl;
+window.ChipPreview = ChipPreview;
+window.ImageInspector = ImageInspector;
+
 window.QUEUE_SAMPLE = QUEUE_SAMPLE;
 window.ModernSunIcon = ModernSunIcon;
 window.ModernWaveIcon = ModernWaveIcon;

@@ -79,10 +79,52 @@ function ModernQueueRow({ row, onShowLog, onRemove, unpackMode }) {
       }
     },
     "\u2715"
-  ), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "row-name" }, row.name), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, display: "flex", alignItems: "center", flexWrap: "wrap" } }, unpackMode ? unpackInputs.map((mt) => /* @__PURE__ */ React.createElement("div", { key: mt, className: "dds-chip", style: { marginRight: 8, marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", { className: "dds-badge" }, "DDS"), DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`)) : packInputs.map((c, i) => {
+  ), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "row-name" }, row.name), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, display: "flex", alignItems: "center", flexWrap: "wrap" } }, unpackMode ? unpackInputs.map((mt) => /* @__PURE__ */ React.createElement(
+    ChipPreview,
+    {
+      key: mt,
+      as: "div",
+      className: "dds-chip",
+      style: { marginRight: 8, marginBottom: 4 },
+      desc: { mode: "unpack", kind: "input", set_id: row.set_id, map_type: mt, label: DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS` }
+    },
+    /* @__PURE__ */ React.createElement("span", { className: "dds-badge" }, "DDS"),
+    DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`
+  )) : packInputs.map((c, i) => {
     const nodes = iconsFor(c);
-    return /* @__PURE__ */ React.createElement("span", { key: `${c.type}-${i}`, className: "row-input-chip" }, nodes.map((n, j) => /* @__PURE__ */ React.createElement(React.Fragment, { key: j }, j > 0 && /* @__PURE__ */ React.createElement("span", { className: "chip-plus" }, "+"), n)), /* @__PURE__ */ React.createElement("span", { className: "label" }, c.label));
-  }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "row-output-label" }, unpackMode ? "Output PNG" : "Output DDS"), unpackMode ? unpackOutputs.map((pt) => /* @__PURE__ */ React.createElement("div", { key: pt, className: "dds-chip" }, /* @__PURE__ */ React.createElement("span", { className: "png-badge" }, "PNG"), PNG_OUTPUT_LABEL[pt] || `${pt.toUpperCase()}.PNG`, (row.status === "done" || done.has(pt)) && /* @__PURE__ */ React.createElement("span", { className: "check", style: { color: "#5DD49A" } }, "\u2713"))) : packOutputs.map((mt) => /* @__PURE__ */ React.createElement("div", { key: mt, className: "dds-chip" }, /* @__PURE__ */ React.createElement("span", { className: "dds-badge" }, "DDS"), DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`, (row.status === "done" || done.has(mt)) && /* @__PURE__ */ React.createElement("span", { className: "check", style: { color: "#5DD49A" } }, "\u2713")))), /* @__PURE__ */ React.createElement("div", { className: "row-status", "data-status": row.status }, /* @__PURE__ */ React.createElement(Donut, { pct: row.pct, status: row.status, theme: "modern" }), /* @__PURE__ */ React.createElement("div", { className: "row-status-text" }, /* @__PURE__ */ React.createElement("div", { className: "label" }, labelText), row.status === "done" && /* @__PURE__ */ React.createElement("div", { className: "eta" }, "100%"), row.status === "queued" && /* @__PURE__ */ React.createElement("div", { className: "eta" }, row.eta_text || `Position ${row.queue_position || ""}`), (row.status === "encoding" || row.status === "packing" || row.status === "writing" || row.status === "reading") && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "eta" }, row.eta_text || `${Math.round(row.pct)}%`), /* @__PURE__ */ React.createElement("div", { className: "row-progress-bar", style: { width: 240 } }, /* @__PURE__ */ React.createElement("div", { className: "fill", style: { width: `${row.pct}%` } }))), row.status === "error" && /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement(
+      ChipPreview,
+      {
+        key: `${c.type}-${i}`,
+        className: "row-input-chip",
+        desc: { mode: "pack", kind: "input", set_id: row.set_id, map_type: c.type, label: c.label }
+      },
+      nodes.map((n, j) => /* @__PURE__ */ React.createElement(React.Fragment, { key: j }, j > 0 && /* @__PURE__ */ React.createElement("span", { className: "chip-plus" }, "+"), n)),
+      /* @__PURE__ */ React.createElement("span", { className: "label" }, c.label)
+    );
+  }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "row-output-label" }, unpackMode ? "Output PNG" : "Output DDS"), unpackMode ? unpackOutputs.map((pt) => /* @__PURE__ */ React.createElement(
+    ChipPreview,
+    {
+      key: pt,
+      as: "div",
+      className: "dds-chip",
+      desc: { mode: "unpack", kind: "output", set_id: row.set_id, map_type: pt, label: PNG_OUTPUT_LABEL[pt] || `${pt.toUpperCase()}.PNG` }
+    },
+    /* @__PURE__ */ React.createElement("span", { className: "png-badge" }, "PNG"),
+    PNG_OUTPUT_LABEL[pt] || `${pt.toUpperCase()}.PNG`,
+    (row.status === "done" || done.has(pt)) && /* @__PURE__ */ React.createElement("span", { className: "check", style: { color: "#5DD49A" } }, "\u2713")
+  )) : packOutputs.map((mt) => /* @__PURE__ */ React.createElement(
+    ChipPreview,
+    {
+      key: mt,
+      as: "div",
+      className: "dds-chip",
+      desc: { mode: "pack", kind: "output", set_id: row.set_id, map_type: mt, lod: 0, label: DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS` }
+    },
+    /* @__PURE__ */ React.createElement("span", { className: "dds-badge" }, "DDS"),
+    DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`,
+    (row.status === "done" || done.has(mt)) && /* @__PURE__ */ React.createElement("span", { className: "check", style: { color: "#5DD49A" } }, "\u2713")
+  ))), /* @__PURE__ */ React.createElement("div", { className: "row-status", "data-status": row.status }, /* @__PURE__ */ React.createElement(Donut, { pct: row.pct, status: row.status, theme: "modern" }), /* @__PURE__ */ React.createElement("div", { className: "row-status-text" }, /* @__PURE__ */ React.createElement("div", { className: "label" }, labelText), row.status === "done" && /* @__PURE__ */ React.createElement("div", { className: "eta" }, "100%"), row.status === "queued" && /* @__PURE__ */ React.createElement("div", { className: "eta" }, row.eta_text || `Position ${row.queue_position || ""}`), (row.status === "encoding" || row.status === "packing" || row.status === "writing" || row.status === "reading") && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "eta" }, row.eta_text || `${Math.round(row.pct)}%`), /* @__PURE__ */ React.createElement("div", { className: "row-progress-bar", style: { width: 240 } }, /* @__PURE__ */ React.createElement("div", { className: "fill", style: { width: `${row.pct}%` } }))), row.status === "error" && /* @__PURE__ */ React.createElement(
     "div",
     {
       className: "eta",

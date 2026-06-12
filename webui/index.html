@@ -227,6 +227,7 @@
         if (_initialized) return;
         _initialized = true;
         var baseUrl = 'http://127.0.0.1:' + port;
+        window.__PACKER_BASE = baseUrl;   // used by the image preview / inspector
 
         window.pywebview = {
           api: new Proxy({}, {

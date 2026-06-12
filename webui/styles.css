@@ -1992,3 +1992,156 @@ html, body {
 .theme-modern .lod-chip .lod-box { width: 28px; height: 28px; }
 .lod-chip .lod-label { order: 1; font-size: 10px; }
 
+/* ─── Image preview popover + inspector ─────────────────────────────────────
+   Both are portalled to <body>, OUTSIDE the scaled stage, so they live in raw
+   screen pixels and aren't affected by the stage transform. */
+
+/* Checkerboard backing so transparency is visible in any preview. */
+.checker {
+  background-color: #2a2f37;
+  background-image:
+    linear-gradient(45deg, #20242b 25%, transparent 25%),
+    linear-gradient(-45deg, #20242b 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #20242b 75%),
+    linear-gradient(-45deg, transparent 75%, #20242b 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+}
+
+/* Hover popover */
+.preview-pop {
+  position: fixed;
+  z-index: 100000;
+  background: #0d1828;
+  border: 1px solid rgba(201, 161, 82, 0.45);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  pointer-events: none;            /* never steals hover from the chip */
+  animation: preview-pop-in 0.10s ease-out;
+}
+html[data-theme="modern"] .preview-pop {
+  background: #161a24;
+  border-color: rgba(152, 147, 252, 0.45);
+}
+@keyframes preview-pop-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.preview-pop-img {
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.preview-pop-img img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  image-rendering: auto;
+}
+.preview-pop-cap {
+  padding: 8px 11px 9px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+.preview-pop-name {
+  font: 600 12px/1.3 'Inter', system-ui, sans-serif;
+  color: #e7d9b5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+html[data-theme="modern"] .preview-pop-name { color: #cfd2e6; }
+.preview-pop-type {
+  margin-top: 2px;
+  font: 500 10px/1.3 'Inter', system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  color: rgba(201, 161, 82, 0.8);
+  text-transform: uppercase;
+}
+html[data-theme="modern"] .preview-pop-type { color: rgba(152, 147, 252, 0.85); }
+
+/* Full-screen inspector */
+.inspector-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100001;
+  background: rgba(6, 11, 20, 0.92);
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(2px);
+  animation: preview-pop-in 0.12s ease-out;
+  user-select: none;
+}
+.inspector-bar {
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(201, 161, 82, 0.25);
+  background: rgba(13, 24, 40, 0.85);
+}
+html[data-theme="modern"] .inspector-bar { border-bottom-color: rgba(152, 147, 252, 0.25); }
+.inspector-titles { display: flex; flex-direction: column; gap: 1px; min-width: 0; margin-right: 16px; }
+.inspector-name {
+  font: 600 14px/1.2 'Inter', system-ui, sans-serif;
+  color: #e7d9b5;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+html[data-theme="modern"] .inspector-name { color: #cfd2e6; }
+.inspector-type {
+  font: 500 11px/1.2 'Inter', system-ui, sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(201, 161, 82, 0.85);
+}
+html[data-theme="modern"] .inspector-type { color: rgba(152, 147, 252, 0.9); }
+.inspector-tools { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.inspector-tools button {
+  min-width: 30px; height: 30px; padding: 0 9px;
+  border: 1px solid rgba(201, 161, 82, 0.3);
+  background: rgba(201, 161, 82, 0.08);
+  color: #c9a152;
+  border-radius: 6px; cursor: pointer; font-size: 15px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.inspector-tools button:hover { background: rgba(201, 161, 82, 0.2); color: #e7d9b5; }
+html[data-theme="modern"] .inspector-tools button {
+  border-color: rgba(152, 147, 252, 0.3);
+  background: rgba(152, 147, 252, 0.08);
+  color: #9893fc;
+}
+html[data-theme="modern"] .inspector-tools button:hover { background: rgba(152, 147, 252, 0.2); color: #cfd2e6; }
+.inspector-zoom {
+  font: 600 12px/1 'JetBrains Mono', monospace;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 46px; text-align: center;
+}
+.inspector-close { font-size: 13px !important; }
+.inspector-close:hover {
+  background: rgba(192, 57, 43, 0.8) !important;
+  color: #fff !important;
+  border-color: rgba(192, 57, 43, 0.6) !important;
+}
+.inspector-stage {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.inspector-img {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  transform-origin: center center;
+  will-change: transform;
+  image-rendering: pixelated;       /* crisp at high zoom for texel inspection */
+  pointer-events: none;
+}
+

@@ -203,7 +203,8 @@ function AnnoQueueRow({ row, onShowLog, onRemove, unpackMode }) {
             ? unpackInputs.map(mt => {
                 const def = DDS_UNPACK_INPUT_DEFS[mt] || { label: mt.toUpperCase(), icons: [] };
                 return (
-                  <span key={mt} className="row-input-chip">
+                  <ChipPreview key={mt} className="row-input-chip"
+                    desc={{ mode: 'unpack', kind: 'input', set_id: row.set_id, map_type: mt, label: def.label }}>
                     {def.icons.map((p, j) => (
                       <React.Fragment key={j}>
                         {j > 0 && <span className="chip-plus">+</span>}
@@ -211,11 +212,12 @@ function AnnoQueueRow({ row, onShowLog, onRemove, unpackMode }) {
                       </React.Fragment>
                     ))}
                     <span className="label">{def.label}</span>
-                  </span>
+                  </ChipPreview>
                 );
               })
             : packInputs.map((c, i) => (
-                <span key={`${c.type}-${i}`} className="row-input-chip">
+                <ChipPreview key={`${c.type}-${i}`} className="row-input-chip"
+                  desc={{ mode: 'pack', kind: 'input', set_id: row.set_id, map_type: c.type, label: c.label }}>
                   {(c.icons || []).map((p, j) => (
                     <React.Fragment key={j}>
                       {j > 0 && <span className="chip-plus">+</span>}
@@ -223,7 +225,7 @@ function AnnoQueueRow({ row, onShowLog, onRemove, unpackMode }) {
                     </React.Fragment>
                   ))}
                   <span className="label">{c.label}</span>
-                </span>
+                </ChipPreview>
               ))}
         </div>
       </div>
@@ -235,7 +237,8 @@ function AnnoQueueRow({ row, onShowLog, onRemove, unpackMode }) {
           ? unpackOutputs.map(pt => {
               const icon = PNG_OUTPUT_ICONS[pt];
               return (
-                <div key={pt} className="dds-chip">
+                <ChipPreview key={pt} as="div" className="dds-chip"
+                  desc={{ mode: 'unpack', kind: 'output', set_id: row.set_id, map_type: pt, label: PNG_OUTPUT_LABEL[pt] || `${pt.toUpperCase()}.PNG` }}>
                   {/* Fixed-width text col — "MASK_ALPHA.PNG" is the longest */}
                   <span style={{ width: 128, flexShrink: 0, whiteSpace: 'nowrap' }}>
                     {PNG_OUTPUT_LABEL[pt] || `${pt.toUpperCase()}.PNG`}
@@ -245,13 +248,14 @@ function AnnoQueueRow({ row, onShowLog, onRemove, unpackMode }) {
                     {icon && <img src={icon} alt="" style={{ width: 22, height: 22, objectFit: 'contain' }} />}
                   </span>
                   {done.has(pt) && <span className="check">✓</span>}
-                </div>
+                </ChipPreview>
               );
             })
           : packOutputs.map(mt => {
               const icons = getDdsOutputIcons(mt, row.input_map_types);
               return (
-                <div key={mt} className="dds-chip">
+                <ChipPreview key={mt} as="div" className="dds-chip"
+                  desc={{ mode: 'pack', kind: 'output', set_id: row.set_id, map_type: mt, lod: 0, label: DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS` }}>
                   {/* Fixed-width text col — "DIFFUSE.DDS" is the longest */}
                   <span style={{ width: 100, flexShrink: 0, whiteSpace: 'nowrap' }}>
                     {DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`}
@@ -267,7 +271,7 @@ function AnnoQueueRow({ row, onShowLog, onRemove, unpackMode }) {
                       : <span />}
                   </span>
                   {(row.status === 'done' || done.has(mt)) && <span className="check">✓</span>}
-                </div>
+                </ChipPreview>
               );
             })}
       </div>

@@ -47,6 +47,53 @@ _PNG_TYPES_BY_DDS: dict[str, list[str]] = {
     "mask":   ["emission", "mask_alpha"],
 }
 
+# Reverse map: which source DDS a given unpacked PNG channel comes from.
+PNG_TYPE_TO_DDS: dict[str, str] = {
+    "diffuse": "diff", "opacity": "diff",
+    "normal": "norm", "rough": "norm",
+    "metal": "metal", "ao": "metal",
+    "height": "height",
+    "emission": "mask", "mask_alpha": "mask",
+}
+
+# Filename token used for each unpacked PNG type (matches _split_channels output).
+PNG_TYPE_FILE_TOKEN: dict[str, str] = {
+    "diffuse": "diffuse", "opacity": "opacity",
+    "normal": "normal", "rough": "roughness",
+    "metal": "metal", "ao": "ao",
+    "height": "height",
+    "emission": "emission", "mask_alpha": "mask_alpha",
+}
+
+
+def extract_channel_image(img: Image.Image, png_type: str) -> Image.Image | None:
+    """Return an in-memory PIL image for a single unpacked channel type.
+
+    Mirrors the per-channel math in _split_channels (including the DirectX→OpenGL
+    normal conversion) but returns the image instead of writing it to disk.
+    Used by the preview/inspector endpoints.
+    """
+    arr = np.array(img.convert("RGBA"), dtype=np.uint8)
+    R, G, B, A = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2], arr[:, :, 3]
+
+    if png_type in ("diffuse", "emission"):
+        return Image.fromarray(arr[:, :, :3], "RGB")
+    if png_type in ("opacity", "ao", "mask_alpha"):
+        return Image.fromarray(A, "L")
+    if png_type in ("metal", "height"):
+        return Image.fromarray(R, "L")
+    if png_type == "rough":
+        return Image.fromarray((255 - A).astype(np.uint8), "L")
+    if png_type == "normal":
+        x = R.astype(np.float32) / 127.5 - 1.0
+        y_ogl = -(G.astype(np.float32) / 127.5 - 1.0)   # flip green (DX → OpenGL)
+        z = np.sqrt(np.clip(1.0 - x * x - y_ogl * y_ogl, 0.0, 1.0))
+        r_out = np.clip((x + 1.0) * 127.5, 0, 255).astype(np.uint8)
+        g_out = np.clip((y_ogl + 1.0) * 127.5, 0, 255).astype(np.uint8)
+        b_out = np.clip(z * 255.0, 0, 255).astype(np.uint8)
+        return Image.fromarray(np.stack([r_out, g_out, b_out], axis=2), "RGB")
+    return None
+
 
 @dataclass
 class DdsFile:

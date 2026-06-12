@@ -114,6 +114,183 @@ function LodChip({ n, on, locked, theme, onToggle }) {
     /* @__PURE__ */ React.createElement("div", { className: "lod-label" }, "LOD", n)
   );
 }
+function previewBase() {
+  return window.__PACKER_BASE || "http://127.0.0.1:45291";
+}
+function previewUrl(desc, maxdim) {
+  const p = new URLSearchParams({
+    mode: desc.mode,
+    kind: desc.kind,
+    set_id: String(desc.set_id),
+    map_type: desc.map_type,
+    lod: String(desc.lod != null ? desc.lod : -1),
+    maxdim: String(maxdim || 0)
+  });
+  return `${previewBase()}/api/preview?${p.toString()}`;
+}
+function ChipPreview({ desc, children, className, style, as }) {
+  const Tag = as || "span";
+  const [hover, setHover] = useState(false);
+  const [pos, setPos] = useState(null);
+  const [meta, setMeta] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const elRef = useRef(null);
+  const timerRef = useRef(null);
+  const computePos = () => {
+    const el = elRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const PW = 240, PH = 280, GAP = 12;
+    let placement = "above";
+    let top = r.top - GAP - PH;
+    if (top < 8) {
+      placement = "below";
+      top = r.bottom + GAP;
+    }
+    let left = r.left + r.width / 2 - PW / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - PW - 8));
+    setPos({ left, top, width: PW, placement });
+  };
+  const onEnter = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      computePos();
+      setHover(true);
+      setFailed(false);
+      setMeta(null);
+      if (window.pywebview && window.pywebview.api) {
+        window.pywebview.api.preview_meta({
+          mode: desc.mode,
+          kind: desc.kind,
+          set_id: desc.set_id,
+          map_type: desc.map_type,
+          lod: desc.lod != null ? desc.lod : -1
+        }).then((m) => {
+          if (m && m.ok) setMeta(m);
+        }).catch(() => {
+        });
+      }
+    }, 140);
+  };
+  const onLeave = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setHover(false);
+  };
+  const onClick = (e) => {
+    e.stopPropagation();
+    if (window.__openInspector) window.__openInspector(desc);
+  };
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
+  return /* @__PURE__ */ React.createElement(
+    Tag,
+    {
+      ref: elRef,
+      className,
+      style: { cursor: "zoom-in", ...style || {} },
+      onMouseEnter: onEnter,
+      onMouseLeave: onLeave,
+      onClick
+    },
+    children,
+    hover && pos && !failed && ReactDOM.createPortal(
+      /* @__PURE__ */ React.createElement("div", { className: "preview-pop", style: { left: pos.left, top: pos.top, width: pos.width } }, /* @__PURE__ */ React.createElement("div", { className: "preview-pop-img checker" }, /* @__PURE__ */ React.createElement(
+        "img",
+        {
+          src: previewUrl(desc, 320),
+          alt: "",
+          onError: () => setFailed(true)
+        }
+      )), /* @__PURE__ */ React.createElement("div", { className: "preview-pop-cap" }, /* @__PURE__ */ React.createElement("div", { className: "preview-pop-name" }, meta ? meta.name : desc.label || "\u2026"), /* @__PURE__ */ React.createElement("div", { className: "preview-pop-type" }, (desc.label || "").toString(), meta && meta.width ? `  \xB7  ${meta.width}\xD7${meta.height}` : ""))),
+      document.body
+    )
+  );
+}
+function ImageInspector({ desc, onClose }) {
+  const [meta, setMeta] = useState(null);
+  const [scale, setScale] = useState(1);
+  const [tx, setTx] = useState(0);
+  const [ty, setTy] = useState(0);
+  const drag = useRef(null);
+  useEffect(() => {
+    if (window.pywebview && window.pywebview.api) {
+      window.pywebview.api.preview_meta({
+        mode: desc.mode,
+        kind: desc.kind,
+        set_id: desc.set_id,
+        map_type: desc.map_type,
+        lod: desc.lod != null ? desc.lod : -1
+      }).then((m) => {
+        if (m && m.ok) setMeta(m);
+      }).catch(() => {
+      });
+    }
+  }, [desc]);
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "0") {
+        setScale(1);
+        setTx(0);
+        setTy(0);
+      } else if (e.key === "+" || e.key === "=") setScale((s) => Math.min(16, s * 1.25));
+      else if (e.key === "-" || e.key === "_") setScale((s) => Math.max(0.1, s / 1.25));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const onWheel = (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    setScale((s) => Math.max(0.1, Math.min(16, s * factor)));
+  };
+  const onDown = (e) => {
+    drag.current = { x: e.clientX, y: e.clientY, tx, ty };
+  };
+  const onMove = (e) => {
+    if (!drag.current) return;
+    setTx(drag.current.tx + (e.clientX - drag.current.x));
+    setTy(drag.current.ty + (e.clientY - drag.current.y));
+  };
+  const onUp = () => {
+    drag.current = null;
+  };
+  const reset = () => {
+    setScale(1);
+    setTx(0);
+    setTy(0);
+  };
+  return ReactDOM.createPortal(
+    /* @__PURE__ */ React.createElement("div", { className: "inspector-scrim", onMouseMove: onMove, onMouseUp: onUp, onMouseLeave: onUp }, /* @__PURE__ */ React.createElement("div", { className: "inspector-bar" }, /* @__PURE__ */ React.createElement("div", { className: "inspector-titles" }, /* @__PURE__ */ React.createElement("span", { className: "inspector-name" }, meta ? meta.name : desc.label || "Preview"), /* @__PURE__ */ React.createElement("span", { className: "inspector-type" }, desc.label || "", meta && meta.width ? `  \xB7  ${meta.width}\xD7${meta.height}` : "")), /* @__PURE__ */ React.createElement("div", { className: "inspector-tools" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScale((s) => Math.max(0.1, s / 1.25)), title: "Zoom out" }, "\u2212"), /* @__PURE__ */ React.createElement("span", { className: "inspector-zoom" }, Math.round(scale * 100), "%"), /* @__PURE__ */ React.createElement("button", { onClick: () => setScale((s) => Math.min(16, s * 1.25)), title: "Zoom in" }, "+"), /* @__PURE__ */ React.createElement("button", { onClick: reset, title: "Reset (0)" }, "Fit"), /* @__PURE__ */ React.createElement("button", { className: "inspector-close", onClick: onClose, title: "Close (Esc)" }, "\u2715"))), /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "inspector-stage checker",
+        onWheel,
+        onMouseDown: onDown,
+        style: { cursor: drag.current ? "grabbing" : "grab" },
+        onClick: (e) => {
+          if (e.target.classList.contains("inspector-stage")) onClose();
+        }
+      },
+      /* @__PURE__ */ React.createElement(
+        "img",
+        {
+          className: "inspector-img",
+          src: previewUrl(desc, 1600),
+          alt: "",
+          draggable: false,
+          style: { transform: `translate(${tx}px, ${ty}px) scale(${scale})` }
+        }
+      )
+    )),
+    document.body
+  );
+}
+window.previewBase = previewBase;
+window.previewUrl = previewUrl;
+window.ChipPreview = ChipPreview;
+window.ImageInspector = ImageInspector;
 window.QUEUE_SAMPLE = QUEUE_SAMPLE;
 window.ModernSunIcon = ModernSunIcon;
 window.ModernWaveIcon = ModernWaveIcon;

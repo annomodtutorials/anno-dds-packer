@@ -11,12 +11,15 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import json
 import logging
 import os
 import sys
+import tempfile
 import threading
 import traceback
+from io import BytesIO
 from pathlib import Path
 
 # ── Debug log — written as early as possible so we can diagnose spawn issues ──
@@ -35,8 +38,9 @@ _write_debug_log(f"cwd: {os.getcwd()}")
 _write_debug_log(f"argv: {sys.argv}")
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from PIL import Image
 from sse_starlette.sse import EventSourceResponse
 
 # Add packer directory to path so we can import packer modules
@@ -659,6 +663,225 @@ async def check_conflicts():
         "count": len(conflict_files),
         "examples": [Path(f).name for f in conflict_files[:6]],
     }
+
+
+# ─── Image preview / inspector ────────────────────────────────────────────────
+# A GET endpoint that returns PNG bytes so the webview can use it directly as an
+# <img src>. Four sources:
+#   pack/input   → the source image file the user dropped (downscaled)
+#   pack/output  → a live render of the packed DDS (build_map_at_lod)
+#   unpack/input → the DDS decoded to PNG via texconv (cached)
+#   unpack/output→ a single extracted channel rendered in-memory
+
+_PREVIEW_TMP = tempfile.TemporaryDirectory(prefix="ddsp_preview_")
+_dds_decode_cache: dict[str, str] = {}   # cache-key → decoded-PNG path
+
+# Map a pack-input chip type to its TextureSet attribute.
+_PACK_INPUT_FIELD = {
+    "diff": "diff", "opacity": "opacity", "norm": "norm", "metal": "metal",
+    "ao": "ao", "gloss": "gloss", "rough": "rough", "height": "height",
+    "rm": "rm", "orm": "orm", "emission": "emission", "icon": "diff",
+}
+
+# Human labels for the inspector header.
+_PACK_INPUT_LABEL = {
+    "diff": "Diffuse", "opacity": "Opacity", "norm": "Normal", "metal": "Metal",
+    "ao": "Ambient Occlusion", "gloss": "Glossiness", "rough": "Roughness",
+    "height": "Height", "rm": "Packed M+R", "orm": "Packed O+R+M",
+    "emission": "Emission", "icon": "Icon",
+}
+_PACK_OUTPUT_LABEL = {
+    "diff": "DIFFUSE.DDS", "norm": "NORMAL.DDS", "metal": "METAL.DDS",
+    "height": "HEIGHT.DDS", "mask": "MASK.DDS", "icon": "ICON.DDS",
+}
+_PNG_OUTPUT_LABEL = {
+    "diffuse": "DIFFUSE.PNG", "opacity": "OPACITY.PNG", "normal": "NORMAL.PNG",
+    "rough": "ROUGHNESS.PNG", "metal": "METAL.PNG", "ao": "AO.PNG",
+    "height": "HEIGHT.PNG", "emission": "EMISSION.PNG", "mask_alpha": "MASK_ALPHA.PNG",
+}
+
+
+def _pack_input_path(ts, map_type: str) -> Path | None:
+    field = _PACK_INPUT_FIELD.get(map_type)
+    if not field:
+        return None
+    val = getattr(ts, field, None)
+    return val if isinstance(val, Path) else None
+
+
+def _find_dds(us, map_type: str | None, lod: int):
+    """Pick a DdsFile of the given map_type — preferring the requested lod,
+    else the lowest lod available."""
+    if not map_type:
+        return None
+    candidates = [f for f in us.files if f.map_type == map_type]
+    if not candidates:
+        return None
+    if lod is not None and lod >= 0:
+        for f in candidates:
+            if f.lod == lod:
+                return f
+    return min(candidates, key=lambda f: f.lod)
+
+
+def _decode_dds_cached(path: Path) -> Image.Image | None:
+    """Decode a DDS to RGBA via texconv, caching by path + mtime + size."""
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    key = f"{path}|{st.st_mtime_ns}|{st.st_size}"
+    cached = _dds_decode_cache.get(key)
+    if cached and Path(cached).exists():
+        im = Image.open(cached)
+        im.load()
+        return im.convert("RGBA")
+
+    with tempfile.TemporaryDirectory() as td:
+        out = unpacker_mod._texconv_to_png(path, Path(td))
+        if out is None:
+            return None
+        dst = Path(_PREVIEW_TMP.name) / (hashlib.md5(key.encode()).hexdigest() + ".png")
+        try:
+            out.replace(dst)
+        except OSError:
+            im = Image.open(out)
+            im.load()
+            return im.convert("RGBA")
+    _dds_decode_cache[key] = str(dst)
+    im = Image.open(dst)
+    im.load()
+    return im.convert("RGBA")
+
+
+def _preview_build_size(native: tuple[int, int], maxdim: int) -> tuple[int, int]:
+    if not maxdim or max(native) <= maxdim:
+        return native
+    s = maxdim / max(native)
+    return (max(1, int(native[0] * s)), max(1, int(native[1] * s)))
+
+
+def _render_preview(mode: str, kind: str, set_id: int, map_type: str,
+                    lod: int, maxdim: int) -> Image.Image | None:
+    if mode == "pack":
+        ts = _sets.get(set_id)
+        if ts is None:
+            return None
+        if kind == "input":
+            p = _pack_input_path(ts, map_type)
+            if p is None or not p.exists():
+                return None
+            im = Image.open(p)
+            im.load()
+            return im.convert("RGBA")
+        # output: render the packed channel live, at preview resolution
+        native = packer_mod.reference_size(ts)
+        size = _preview_build_size(native, maxdim)
+        return packer_mod.build_map_at_lod(ts, map_type, size)
+
+    # unpack
+    us = _unpack_sets.get(set_id)
+    if us is None:
+        return None
+    if kind == "input":
+        f = _find_dds(us, map_type, lod)
+        return _decode_dds_cached(f.path) if f else None
+    # output: decode the source DDS then extract the requested channel
+    src_mt = unpacker_mod.PNG_TYPE_TO_DDS.get(map_type)
+    f = _find_dds(us, src_mt, lod)
+    if f is None:
+        return None
+    rgba = _decode_dds_cached(f.path)
+    if rgba is None:
+        return None
+    return unpacker_mod.extract_channel_image(rgba, map_type)
+
+
+def _png_response_bytes(img: Image.Image, maxdim: int) -> bytes:
+    if maxdim and max(img.size) > maxdim:
+        s = maxdim / max(img.size)
+        img = img.resize((max(1, int(img.width * s)), max(1, int(img.height * s))),
+                         Image.LANCZOS)
+    buf = BytesIO()
+    img.convert("RGBA").save(buf, format="PNG")
+    return buf.getvalue()
+
+
+# `def` (not `async def`) so FastAPI runs it in its threadpool — texconv/PIL are
+# blocking and must not stall the event loop / SSE stream.
+@app.get("/api/preview")
+def preview(mode: str, kind: str, set_id: int, map_type: str,
+            lod: int = -1, maxdim: int = 0):
+    try:
+        img = _render_preview(mode, kind, set_id, map_type, lod, maxdim)
+    except Exception:
+        log.exception("preview render failed")
+        img = None
+    if img is None:
+        return Response(status_code=404)
+    return Response(content=_png_response_bytes(img, maxdim),
+                    media_type="image/png",
+                    headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/preview_meta")
+async def preview_meta(request: Request):
+    """Return {ok, name, type_label, width, height} for an inspector header."""
+    d = await request.json()
+    if not isinstance(d, dict):
+        return {"ok": False}
+    mode = d.get("mode"); kind = d.get("kind")
+    set_id = int(d.get("set_id", -1)); map_type = d.get("map_type", "")
+    lod = int(d.get("lod", -1))
+
+    name = ""; type_label = ""; w = 0; h = 0
+    try:
+        if mode == "pack":
+            ts = _sets.get(set_id)
+            if ts is None:
+                return {"ok": False}
+            if kind == "input":
+                p = _pack_input_path(ts, map_type)
+                if p is None:
+                    return {"ok": False}
+                name = p.name
+                type_label = _PACK_INPUT_LABEL.get(map_type, map_type.title())
+                with Image.open(p) as im:
+                    w, h = im.size
+            else:
+                lod0 = max(0, lod)
+                name = packer_mod.dds_output_path(Path("."), ts.base_name, map_type, lod0).name
+                type_label = _PACK_OUTPUT_LABEL.get(map_type, map_type.upper() + ".DDS")
+                w, h = packer_mod.reference_size(ts)
+        else:
+            us = _unpack_sets.get(set_id)
+            if us is None:
+                return {"ok": False}
+            if kind == "input":
+                f = _find_dds(us, map_type, lod)
+                if f is None:
+                    return {"ok": False}
+                name = f.path.name
+                type_label = f"{map_type.upper()} DDS"
+                im = _decode_dds_cached(f.path)
+                if im is not None:
+                    w, h = im.size
+            else:
+                src_mt = unpacker_mod.PNG_TYPE_TO_DDS.get(map_type)
+                f = _find_dds(us, src_mt, lod)
+                if f is None:
+                    return {"ok": False}
+                token = unpacker_mod.PNG_TYPE_FILE_TOKEN.get(map_type, map_type)
+                name = f"{us.base_name}_{token}_{f.lod}.png"
+                type_label = _PNG_OUTPUT_LABEL.get(map_type, map_type.upper() + ".PNG")
+                im = _decode_dds_cached(f.path)
+                if im is not None:
+                    w, h = im.size
+    except Exception:
+        log.exception("preview_meta failed")
+        return {"ok": False}
+
+    return {"ok": True, "name": name, "type_label": type_label, "width": w, "height": h}
 
 
 # ─── No-op stubs for Tauri-handled methods ────────────────────────────────────

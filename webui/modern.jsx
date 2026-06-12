@@ -113,15 +113,17 @@ function ModernQueueRow({ row, onShowLog, onRemove, unpackMode }) {
         <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
           {unpackMode
             ? unpackInputs.map(mt => (
-                <div key={mt} className="dds-chip" style={{ marginRight: 8, marginBottom: 4 }}>
+                <ChipPreview key={mt} as="div" className="dds-chip" style={{ marginRight: 8, marginBottom: 4 }}
+                  desc={{ mode: 'unpack', kind: 'input', set_id: row.set_id, map_type: mt, label: DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS` }}>
                   <span className="dds-badge">DDS</span>
                   {DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`}
-                </div>
+                </ChipPreview>
               ))
             : packInputs.map((c, i) => {
                 const nodes = iconsFor(c);
                 return (
-                  <span key={`${c.type}-${i}`} className="row-input-chip">
+                  <ChipPreview key={`${c.type}-${i}`} className="row-input-chip"
+                    desc={{ mode: 'pack', kind: 'input', set_id: row.set_id, map_type: c.type, label: c.label }}>
                     {nodes.map((n, j) => (
                       <React.Fragment key={j}>
                         {j > 0 && <span className="chip-plus">+</span>}
@@ -129,7 +131,7 @@ function ModernQueueRow({ row, onShowLog, onRemove, unpackMode }) {
                       </React.Fragment>
                     ))}
                     <span className="label">{c.label}</span>
-                  </span>
+                  </ChipPreview>
                 );
               })}
         </div>
@@ -140,18 +142,20 @@ function ModernQueueRow({ row, onShowLog, onRemove, unpackMode }) {
         <div className="row-output-label">{unpackMode ? 'Output PNG' : 'Output DDS'}</div>
         {unpackMode
           ? unpackOutputs.map(pt => (
-              <div key={pt} className="dds-chip">
+              <ChipPreview key={pt} as="div" className="dds-chip"
+                desc={{ mode: 'unpack', kind: 'output', set_id: row.set_id, map_type: pt, label: PNG_OUTPUT_LABEL[pt] || `${pt.toUpperCase()}.PNG` }}>
                 <span className="png-badge">PNG</span>
                 {PNG_OUTPUT_LABEL[pt] || `${pt.toUpperCase()}.PNG`}
                 {(row.status === 'done' || done.has(pt)) && <span className="check" style={{color:'#5DD49A'}}>✓</span>}
-              </div>
+              </ChipPreview>
             ))
           : packOutputs.map(mt => (
-              <div key={mt} className="dds-chip">
+              <ChipPreview key={mt} as="div" className="dds-chip"
+                desc={{ mode: 'pack', kind: 'output', set_id: row.set_id, map_type: mt, lod: 0, label: DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS` }}>
                 <span className="dds-badge">DDS</span>
                 {DDS_LABEL[mt] || `${mt.toUpperCase()}.DDS`}
                 {(row.status === 'done' || done.has(mt)) && <span className="check" style={{color:'#5DD49A'}}>✓</span>}
-              </div>
+              </ChipPreview>
             ))}
       </div>
 

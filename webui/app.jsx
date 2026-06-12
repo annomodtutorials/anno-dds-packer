@@ -334,6 +334,7 @@ function App() {
   const [errorModal, setErrorModal] = useState(null);   // {name, text} or null
   const [unpackMode, setUnpackMode] = useState(false);
   const [overwritePending, setOverwritePending] = useState(null); // {count, examples} | null
+  const [inspector, setInspector] = useState(null);    // image-inspector descriptor | null
 
   // Ref so async callbacks (closures) always see the current unpackMode
   const unpackModeRef = useRef(false);
@@ -588,10 +589,12 @@ function App() {
     window.__onBatchDone = async () => {
       setMode('idle');
     };
+    window.__openInspector = (desc) => setInspector(desc);
     return () => {
       delete window.__onFilesDropped;
       delete window.__updateProgress;
       delete window.__onBatchDone;
+      delete window.__openInspector;
     };
   }, []);
 
@@ -769,6 +772,9 @@ function App() {
           )}
         </div>
       </div>
+      {inspector && (
+        <ImageInspector desc={inspector} onClose={() => setInspector(null)} />
+      )}
     </div>
   );
 }
