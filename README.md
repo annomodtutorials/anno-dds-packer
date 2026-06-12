@@ -20,6 +20,7 @@ them back into editable PNGs, per channel.
 - **LOD chain** — generates LOD0–LOD4 at the correct resolution steps. LOD0 is mandatory; LOD1–4 are optional per-run.
 - **BC7_TYPELESS encoding** — textures are encoded as DXGI format 98 (`BC7_TYPELESS`), exactly what the game runtime expects. `texconv` writes BC7_UNORM (99); the DXT10 header byte is patched post-encode.
 - **UI icon mode** — any PNG whose name starts with `icon` is treated as a UI icon: a transparent-background icon is flattened onto the game's icon background colour (`#131111`) with the original transparency preserved as an alpha mask, and encoded as `BC7_UNORM_SRGB` (DXGI 99) with the correct sRGB tag. Output is named `<base>_<lod>.dds` (no map-type segment).
+- **Texture inspector** — hover any input/output chip for a thumbnail preview (filename, type, dimensions); click for a full-screen viewer with pan/zoom, per-channel isolation (R/G/B/A/RGB/RGBA), a semantic pill that names what each channel holds (e.g. Metal alpha → *Ambient Occlusion*), and ←/→ navigation through the whole queue. Pack outputs render live, so you can preview the packed DDS before converting.
 - **Unpack mode** — drop game DDS files to extract all channels back to editable PNGs.
 - **Auto mode switching** — drop DDS files while in Pack mode and the tool switches to Unpack automatically (and vice versa).
 - **Two themes** — Anno (gold on navy, serif) and Modern (violet on dark, sans-serif).
@@ -56,7 +57,7 @@ No Python, no runtime install, nothing else.
 
 ### Portable *(recommended)*
 
-1. Download **`Anno_DDS_Packer_v1.3.0_portable.zip`** from the [Releases](../../releases/latest) page.
+1. Download **`Anno_DDS_Packer_v1.4.0_portable.zip`** from the [Releases](../../releases/latest) page.
 2. Extract the zip anywhere — Desktop, tools folder, USB stick, wherever.
 3. Run **`Anno DDS Packer.exe`**.
 
